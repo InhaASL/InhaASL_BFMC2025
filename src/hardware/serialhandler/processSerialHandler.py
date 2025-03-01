@@ -30,6 +30,7 @@ if __name__ == "__main__":
     import sys
     sys.path.insert(0, "../../..")
 
+import rospy
 import serial
 
 from src.templates.workerprocess import WorkerProcess

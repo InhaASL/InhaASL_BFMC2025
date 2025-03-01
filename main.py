@@ -60,7 +60,7 @@ from src.data.Semaphores.Semaphores import processSemaphores
 from src.data.TrafficCommunication.processTrafficCommunication import processTrafficCommunication
 from src.utils.ipManager.IpReplacement import IPManager
 # ------ New component imports starts here ------#
-
+from src.hardware.rosBridge.processRosBridge import processRosBridge
 # ------ New component imports ends here ------#
 # ======================================== SETTING UP ====================================
 allProcesses = list()
@@ -81,7 +81,7 @@ TrafficCommunication = False
 SerialHandler = True
 
 # ------ New component flags starts here ------#
- 
+RosBridge = False
 # ------ New component flags ends here ------#
 
 # ===================================== SETUP PROCESSES ==================================
@@ -122,6 +122,9 @@ if SerialHandler:
     allProcesses.append(processSerialHandler)
 
 # ------ New component runs starts here ------#
+if RosBridge:
+    processRosBridge = processRosBridge(queueList, logging, debugging = False)
+    allProcesses.append(processRosBridge)
  
 # ------ New component runs ends here ------#
 
