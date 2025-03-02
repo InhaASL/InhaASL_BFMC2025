@@ -84,6 +84,9 @@ SerialHandler = True
 RosBridge = False
 # ------ New component flags ends here ------#
 
+if RosBridge and Dashboard:
+    Dashboard = False
+
 # ===================================== SETUP PROCESSES ==================================
 
 # Initializing gateway

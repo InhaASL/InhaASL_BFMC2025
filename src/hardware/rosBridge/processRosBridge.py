@@ -1,12 +1,12 @@
 if __name__ == "__main__":
     import sys
-    sys.path.insert(0, "../../..")
+    sys.path.insert(0, "../../")
 
 import rospy
 
 from src.templates.workerprocess import WorkerProcess
-from Brain.src.hardware.rosBridge.threads.threadRosBridgeRead import threadRosBridgeRead
-from Brain.src.hardware.rosBridge.threads.threadRosBridgeWirte import threadRosBridgeWrite
+from src.hardware.rosBridge.threads.threadRosBridgeRead import threadRosBridgeRead
+from src.hardware.rosBridge.threads.threadRosBridgeWirte import threadRosBridgeWrite
 
 class processRosBridge(WorkerProcess):
     """This process Handle RosBridge which connnect between ROS and SerialHandler

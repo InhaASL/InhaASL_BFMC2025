@@ -13,8 +13,8 @@ from src.utils.messages.allMessages import (
     ToggleInstant,
     ToggleResourceMonitor
 )
-from src.utils.messages.messageHandlerSubscriber import messageHandlerSubscriber
 from src.utils.messages.messageHandlerSender import messageHandlerSender
+
 class threadRosBridgeWrite(ThreadWithStop):
     """This thread read data from ROS topic and deliver them to SerialHandler.
     Args:
@@ -32,6 +32,10 @@ class threadRosBridgeWrite(ThreadWithStop):
         self.queuesList = queueList
         self.logging = logging
         self.debugging = debugging
+
+        self.bfmc_speed = None
+        self.bfmc_steer = None
+
         rospy.Subscriber('/control', AckermannDriveStamped, self.ack_cb)
         #rospy.Subscriber('/car_state)
         # ADD CAR STATE MSG FOR BRING UP CAR FROM ROS NODE
@@ -43,22 +47,21 @@ class threadRosBridgeWrite(ThreadWithStop):
 
     def run(self):
         while self._running:
+            if self.bfmc_speed != None and self.bfmc_steer != None:
+                self.speedMotorSender.send(self.bfmc_speed)
+                self.steerMotorSender.send(self.bfmc_steer)
+                
             pass
-
-    def subscribe(self):
-        """Subscribes to the messages you are interested in"""
-        pass
-
 
     def ack_cb(self, msg):
        ros_speed = msg.AckermannDrive.speed
        ros_steer = msg.AckermannDrive.steering_angle
 
-       bfmc_speed, bfmc_steer = self.msg_converter(ros_speed, ros_steer)
+       self.bfmc_speed, self.bfmc_steer = self.msg_converter(ros_speed, ros_steer)
 
     def msg_converter(self, speed_val, steer_val):
-        conv_speed = (int)(speed_val * 100)
-        conv_steer = (int)(math.degrees(steer_val))
+        conv_speed = int(speed_val * 100)
+        conv_steer = int(math.degrees(steer_val))
         return conv_speed, conv_steer
 
 
