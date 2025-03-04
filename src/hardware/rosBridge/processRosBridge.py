@@ -5,6 +5,7 @@ if __name__ == "__main__":
 import rospy
 
 from src.templates.workerprocess import WorkerProcess
+from src.hardware.serialhandler.threads.filehandler import FileHandler
 from src.hardware.rosBridge.threads.threadRosBridgeRead import threadRosBridgeRead
 from src.hardware.rosBridge.threads.threadRosBridgeWirte import threadRosBridgeWrite
 
@@ -17,7 +18,10 @@ class processRosBridge(WorkerProcess):
     """
 
     def __init__(self, queueList, logging=False, debugging=False):
+        logFile = "RosHistoryFile.txt"
         rospy.init_node("ROS_Bridge", anonymous=True)
+
+        self.historyFile = FileHandler(logFile)
         self.queuesList = queueList
         self.debugging = debugging
         self.logging = logging
@@ -27,7 +31,7 @@ class processRosBridge(WorkerProcess):
         """Apply the initializing methods and start the threads."""
         super(processRosBridge, self).run()
 
-        self.historyFo
+        self.historyFile.close()
 
     def _init_threads(self):
         """Create the rosBridge Publisher thread and add to the list of threads."""
@@ -36,6 +40,8 @@ class processRosBridge(WorkerProcess):
         rosBridgeWriteTh = threadRosBridgeWrite(self.queuesList, self.logging, self.debugging)
         self.threads.append(rosBridgeWriteTh)
 
+# TEST CODE
+# [ python3 processRosBridge.py ] in terminal
 if __name__ == "__main__":
     from multiprocessing import Queue, Pipe
     import logging

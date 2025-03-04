@@ -44,7 +44,7 @@ class threadRosBridgeRead(ThreadWithStop):
     def run(self):
         while self._running:
             enableButton = self.enableButtonSubscriber.receive()
-            if enableButton:
+            if enableButton is not None and enableButton:
                 imuData = self.imuDataSubscriber.receive()
                 if imuData is not None:
                     roll = float(imuData["roll"])
@@ -78,7 +78,7 @@ class threadRosBridgeRead(ThreadWithStop):
                     imu_msg.angular_velocity.z = 0.0
 
                     # 메시지 퍼블리시
-                    self.imu_pub.publish()
+                    self.imu_pub.publish(imu_msg)
                 
 
 
@@ -87,13 +87,13 @@ class threadRosBridgeRead(ThreadWithStop):
     def subscribe(self):
         """Subscribes to the messages you are interested in"""
 
-        self.enableButtonSubscriber = messageHandlerSubscriber(self.queuesList, EnableButton)
-        self.batteryLvlSubscriber = messageHandlerSubscriber(self.queuesList, BatteryLvl)
-        self.instantConsumptionSubscriber = messageHandlerSubscriber(self.queuesList, InstantConsumption)
-        self.imuDataSubscriber = messageHandlerSubscriber(self.queuesList, ImuData)
-        self.imuAckSubscriber = messageHandlerSubscriber(self.queuesList, ImuAck)
-        self.resourceMonitorSubscriber = messageHandlerSubscriber(self.queuesList, ResourceMonitor)
-        self.currentSpeedSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSpeed)
-        self.currentSteerSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSteer)
-        self.warningSubscriber = messageHandlerSubscriber(self.queuesList, WarningSignal)
-        pass
+        self.enableButtonSubscriber = messageHandlerSubscriber(self.queuesList, EnableButton, "lastOnly", True)
+        # self.batteryLvlSubscriber = messageHandlerSubscriber(self.queuesList, BatteryLvl, "lastOnly", True)
+        # self.instantConsumptionSubscriber = messageHandlerSubscriber(self.queuesList, InstantConsumption, "lastOnly", True)
+        self.imuDataSubscriber = messageHandlerSubscriber(self.queuesList, ImuData, "lastOnly", True)
+        # self.imuAckSubscriber = messageHandlerSubscriber(self.queuesList, ImuAck, "lastOnly", True)
+        # self.resourceMonitorSubscriber = messageHandlerSubscriber(self.queuesList, ResourceMonitor, "lastOnly", True)
+        # self.currentSpeedSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSpeed, "lastOnly", True)
+        # self.currentSteerSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSteer, "lastOnly", True)
+        # self.warningSubscriber = messageHandlerSubscriber(self.queuesList, WarningSignal, "lastOnly", True)
+
