@@ -1,6 +1,6 @@
 if __name__ == "__main__":
     import sys
-    sys.path.insert(0, "../../")
+    sys.path.insert(0, "../../..")
 
 import rospy
 
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     import time
 
     allProcesses = list()
-    debugg = False
+    debugg = True
     queueList = {
         "Critical": Queue(),
         "Warning": Queue(),
@@ -56,8 +56,8 @@ if __name__ == "__main__":
         "Config": Queue(),
     }
     logger = logging.getLogger()
-    process = processRosBridge(queueList, logger, debugg, True)
+    process = processRosBridge(queueList, logger, debugg)
     process.daemon = True
     process.start()
-    time.sleep()
+    time.sleep(4)
     process.stop()

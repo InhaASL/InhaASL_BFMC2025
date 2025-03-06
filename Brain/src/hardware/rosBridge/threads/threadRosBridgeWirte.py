@@ -5,14 +5,8 @@ from std_msgs.msg import String
 from src.templates.threadwithstop import ThreadWithStop
 from src.utils.messages.allMessages import (
     ROSKlem,
-    Control,
     ROSSpeedMotor,
     ROSSteerMotor,
-    Brake,
-    ToggleBatteryLvl,
-    ToggleImuData,
-    ToggleInstant,
-    ToggleResourceMonitor
 )
 from src.utils.messages.messageHandlerSender import messageHandlerSender
 
@@ -39,7 +33,7 @@ class threadRosBridgeWrite(ThreadWithStop):
         self.kl_state = None
 
         rospy.Subscriber('/control', AckermannDriveStamped, self.ack_cb)
-        rospy.Subscriber('/kl', String(), self.kl_cb)
+        rospy.Subscriber('/kl', String, self.kl_cb)
         #rospy.Subscriber('/car_state)
         # ADD CAR STATE MSG FOR BRING UP CAR FROM ROS NODE
 
