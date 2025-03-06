@@ -244,4 +244,21 @@ class WarningSignal(Enum):
     msgID = 3
     msgType = "str"
 
+####################### From ROS Bridge #######################
+class ROSSpeedMotor(Enum):
+    Queue = "General"
+    Owner = "threadRosBridgeWrite"
+    msgID = 1
+    msgType = "str"
+
+class ROSSteerMotor(Enum):
+    Queue = "General"
+    Owner = "threadRosBridgeWrite"
+    msgID = 2
+    msgType = "str"
+class ROSKlem(Enum):
+    Queue = "General"
+    Owner = "threadRosBridgeWrite"
+    msgID = 3
+    msgType = "str"
 ### It will have this format: {"WarningName":"name1", "WarningID": 1}

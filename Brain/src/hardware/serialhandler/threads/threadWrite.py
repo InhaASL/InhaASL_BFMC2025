@@ -41,7 +41,10 @@ from src.utils.messages.allMessages import (
     ToggleBatteryLvl,
     ToggleImuData,
     ToggleInstant,
-    ToggleResourceMonitor
+    ToggleResourceMonitor,
+    ROSSpeedMotor,
+    ROSSteerMotor,
+    ROSKlem
 )
 from src.utils.messages.messageHandlerSubscriber import messageHandlerSubscriber
 from src.utils.messages.messageHandlerSender import messageHandlerSender
@@ -95,6 +98,9 @@ class threadWrite(ThreadWithStop):
         self.batterySubscriber = messageHandlerSubscriber(self.queuesList, ToggleBatteryLvl, "lastOnly", True)
         self.resourceMonitorSubscriber = messageHandlerSubscriber(self.queuesList, ToggleResourceMonitor, "lastOnly", True)
         self.imuSubscriber = messageHandlerSubscriber(self.queuesList, ToggleImuData, "lastOnly", True)
+        self.ROSklSubscriber = messageHandlerSubscriber(self.queuesList, ROSKlem, "lastOnly", True)
+        self.ROSsteerMotorSubscriber = messageHandlerSubscriber(self.queuesList, ROSSteerMotor, "lastOnly", True)
+        self.ROSspeedMotorSubscriber = messageHandlerSubscriber(self.queuesList, ROSSpeedMotor, "lastOnly", True)
 
     # ==================================== SENDING =======================================
 
@@ -157,6 +163,28 @@ class threadWrite(ThreadWithStop):
                         command = {"action": "kl", "mode": 0}
                         self.sendToSerial(command)
 
+                ROSklRecv = self.ROSklSubscriber.receive()
+                if ROSklRecv is not None:
+                    if self.debugger:
+                        self.logger.info(klRecv)
+                    if klRecv == "30":
+                        self.running = True
+                        self.engineEnabled = True
+                        command = {"action": "kl", "mode": 30}
+                        self.sendToSerial(command)
+                        self.loadConfig("sensors")
+                    elif klRecv == "15":
+                        self.running = True
+                        self.engineEnabled = False
+                        command = {"action": "kl", "mode": 15}
+                        self.sendToSerial(command)
+                        self.loadConfig("sensors")
+                    elif klRecv == "0":
+                        self.running = False
+                        self.engineEnabled = False
+                        command = {"action": "kl", "mode": 0}
+                        self.sendToSerial(command)
+
                 if self.running:
                     if self.engineEnabled:
                         brakeRecv = self.brakeSubscriber.receive()
@@ -173,11 +201,25 @@ class threadWrite(ThreadWithStop):
                             command = {"action": "speed", "speed": int(speedRecv)}
                             self.sendToSerial(command)
 
+                        ROSspeedRecv = self.ROSspeedMotorSubscriber.receive()
+                        if ROSspeedRecv is not None: 
+                            if self.debugger:
+                                self.logger.info(ROSspeedRecv)
+                            command = {"action": "speed", "speed": int(ROSspeedRecv)}
+                            self.sendToSerial(command)
+
                         steerRecv = self.steerMotorSubscriber.receive()
                         if steerRecv is not None:
                             if self.debugger:
                                 self.logger.info(steerRecv) 
                             command = {"action": "steer", "steerAngle": int(steerRecv)}
+                            self.sendToSerial(command)
+                        
+                        ROSsteerRecv = self.ROSsteerMotorSubscriber.receive()
+                        if ROSsteerRecv is not None:
+                            if self.debugger:
+                                self.logger.info(ROSsteerRecv) 
+                            command = {"action": "steer", "steerAngle": int(ROSsteerRecv)}
                             self.sendToSerial(command)
 
                         controlRecv = self.controlSubscriber.receive()

@@ -4,10 +4,10 @@ from ackermann_msgs.msg import AckermannDriveStamped
 from std_msgs.msg import String
 from src.templates.threadwithstop import ThreadWithStop
 from src.utils.messages.allMessages import (
-    Klem,
+    ROSKlem,
     Control,
-    SteerMotor,
-    SpeedMotor,
+    ROSSpeedMotor,
+    ROSSteerMotor,
     Brake,
     ToggleBatteryLvl,
     ToggleImuData,
@@ -43,15 +43,17 @@ class threadRosBridgeWrite(ThreadWithStop):
         #rospy.Subscriber('/car_state)
         # ADD CAR STATE MSG FOR BRING UP CAR FROM ROS NODE
 
-        self.speedMotorSender = messageHandlerSender(self.queuesList, SpeedMotor)
-        self.steerMotorSender = messageHandlerSender(self.queuesList, SteerMotor)
-        self.klSender = messageHandlerSender(self.queuesList, Klem)
+        self.speedMotorSender = messageHandlerSender(self.queuesList, ROSSpeedMotor)
+        self.steerMotorSender = messageHandlerSender(self.queuesList, ROSSteerMotor)
+        self.klSender = messageHandlerSender(self.queuesList, ROSKlem)
 
         super(threadRosBridgeWrite, self).__init__()
 
     def run(self):
         while self._running:
             if self.bfmc_speed != None and self.bfmc_steer != None:
+                self.bfmc_speed = str(self.bfmc_speed)
+                self.bfmc_steer = str(self.bfmc_steer)
                 self.speedMotorSender.send(self.bfmc_speed)
                 self.steerMotorSender.send(self.bfmc_steer)
             

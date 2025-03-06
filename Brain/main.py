@@ -81,11 +81,9 @@ TrafficCommunication = False
 SerialHandler = True
 
 # ------ New component flags starts here ------#
-RosBridge = False
+RosBridge = True
 # ------ New component flags ends here ------#
 
-if RosBridge and Dashboard:
-    Dashboard = False
 
 # ===================================== SETUP PROCESSES ==================================
 
@@ -105,9 +103,9 @@ if Dashboard:
     allProcesses.append(processDashboard)
 
 # Initializing camera
-if Camera:
-    processCamera = processCamera(queueList, logging , debugging = False)
-    allProcesses.append(processCamera)
+# if Camera:
+#     processCamera = processCamera(queueList, logging , debugging = False)
+#     allProcesses.append(processCamera)
 
 # Initializing semaphores
 if Semaphores:
