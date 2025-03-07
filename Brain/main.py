@@ -126,15 +126,28 @@ if SerialHandler:
 if RosBridge:
     processRosBridge = processRosBridge(queueList, logging, debugging = False)
     allProcesses.append(processRosBridge)
- 
 # ------ New component runs ends here ------#
 
+print(allProcesses)
 # ===================================== START PROCESSES ==================================
 for process in allProcesses:
     process.daemon = True
     process.start()
 
 time.sleep(10)
+
+def verify_processes(process_list):
+    """모든 프로세스의 is_alive() 상태를 확인하는 간단한 함수."""
+    print("=== 프로세스 상태 점검 시작 ===")
+    for idx, proc in enumerate(process_list, start=1):
+        if proc.is_alive():
+            print(f"[{idx}] {proc.__class__.__name__} 프로세스가 정상적으로 동작 중입니다.")
+        else:
+            print(f"[{idx}] {proc.__class__.__name__} 프로세스가 동작하지 않습니다!")
+    print("=== 프로세스 상태 점검 종료 ===")
+
+verify_processes(allProcesses)
+
 c4_bomb = r"""
   _______________________
  /                       \
@@ -166,11 +179,30 @@ except KeyboardInterrupt:
     """
 
     print(big_text)
+
+# -------- 프로세스 종료 & 디버깅 로깅 --------
+    print("[메인] 모든 자식 프로세스 중지 시도 (역순)...\n")
     for proc in reversed(allProcesses):
-        print("Process stopped", proc)
+        name = proc.__class__.__name__
+        pid = proc.pid
+        print(f"→ {name} (PID={pid}) 종료 시도")
         proc.stop()
-    print("Process stopped", processGateway)
+        time.sleep(1)  # 잠시 대기 후 is_alive() 확인
+        
+        if proc.is_alive():
+            print(f"→ {name} (PID={pid}) 여전히 종료되지 않음!")
+        else:
+            print(f"→ {name} (PID={pid}) 정상적으로 종료됨")
+
+    # Gateway 프로세스도 멈춤
+    print(f"[메인] Gateway 프로세스 {processGateway.__class__.__name__} (PID={processGateway.pid}) 종료 시도")
     processGateway.stop()
+    time.sleep(1)
+    if processGateway.is_alive():
+        print(f"→ Gateway (PID={processGateway.pid}) 여전히 종료되지 않음!")
+    else:
+        print("→ Gateway 정상적으로 종료됨")
+
 
     big_text = """
     PPPP   RRRR   EEEEE  SSSS  SSSS       CCCC  TTTTT RRRR    L          ++      CCCC      !!! 

@@ -83,7 +83,7 @@ class WorkerProcess(Process):
         for th in self.threads:
             if hasattr(th, "stop") and callable(getattr(th, "stop")):
                 th.stop()
-                th.join(0.1)
+                th.join()
                 if th.is_alive():
                     print(
                         "The thread %s cannot normally stop, it's blocked somewhere!"

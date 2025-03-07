@@ -1,7 +1,7 @@
 import rospy
 from sensor_msgs.msg import Imu
 import tf
-import json
+import ast
 from src.templates.threadwithstop import ThreadWithStop
 from src.utils.messages.allMessages import (
     BatteryLvl,
@@ -34,7 +34,7 @@ class threadRosBridgeRead(ThreadWithStop):
         self.logging = logging
         self.debugging = debugging
         self.subscribe()
-
+        
         self.imu_pub = rospy.Publisher('/imu', Imu, queue_size= 10)
         self.ros_imu = Imu()
         #self.cur_state_pub = rospy.Publisher('/car_cur_state', CarState, queue_size=10)
@@ -44,47 +44,45 @@ class threadRosBridgeRead(ThreadWithStop):
 
     def run(self):
         while self._running:
-            enableButton = self.enableButtonSubscriber.receive()
-            if enableButton is not None and enableButton:
-                imuData = self.imuDataSubscriber.receive()
-                if imuData is not None:
-                    imuData = json.loads(imuData)
-                    roll = float(imuData["roll"])
-                    pitch = float(imuData["pitch"])
-                    yaw = float(imuData["yaw"])
-                    accelx = float(imuData["accelx"])
-                    accely = float(imuData["accely"])
-                    accelz = float(imuData["accelz"])
+            imuData = self.imuDataSubscriber.receive()
+            
+            if imuData is not None:
+                imuData = ast.literal_eval(imuData)
+                roll = float(imuData["roll"])
+                pitch = float(imuData["pitch"])
+                yaw = float(imuData["yaw"])
+                accelx = float(imuData["accelx"])
+                accely = float(imuData["accely"])
+                accelz = float(imuData["accelz"])
 
-                    quaternion = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
+                quaternion = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
+                # print(quaternion)
+                # IMU 메시지 생성
+                imu_msg = Imu()
+                imu_msg.header.stamp = rospy.Time.now()
+                imu_msg.header.frame_id = "imu"  # 센서 프레임 지정
 
-                    # IMU 메시지 생성
-                    imu_msg = Imu()
-                    imu_msg.header.stamp = rospy.Time.now()
-                    imu_msg.header.frame_id = "imu"  # 센서 프레임 지정
+                # Orientation (쿼터니언)
+                imu_msg.orientation.x = quaternion[0]
+                imu_msg.orientation.y = quaternion[1]
+                imu_msg.orientation.z = quaternion[2]
+                imu_msg.orientation.w = quaternion[3]
 
-                    # Orientation (쿼터니언)
-                    imu_msg.orientation.x = quaternion[0]
-                    imu_msg.orientation.y = quaternion[1]
-                    imu_msg.orientation.z = quaternion[2]
-                    imu_msg.orientation.w = quaternion[3]
+                # Linear Acceleration
+                imu_msg.linear_acceleration.x = accelx
+                imu_msg.linear_acceleration.y = accely
+                imu_msg.linear_acceleration.z = accelz
 
-                    # Linear Acceleration
-                    imu_msg.linear_acceleration.x = accelx
-                    imu_msg.linear_acceleration.y = accely
-                    imu_msg.linear_acceleration.z = accelz
-
-                    # Angular Velocity (필요한 경우 설정)
-                    imu_msg.angular_velocity.x = 0.0
-                    imu_msg.angular_velocity.y = 0.0
-                    imu_msg.angular_velocity.z = 0.0
-
-                    # 메시지 퍼블리시
-                    self.imu_pub.publish(imu_msg)
+                # Angular Velocity (필요한 경우 설정)
+                imu_msg.angular_velocity.x = 0.0
+                imu_msg.angular_velocity.y = 0.0
+                imu_msg.angular_velocity.z = 0.0
                 
-
-
-            pass
+                # 메시지 퍼블리시
+                print(imu_msg)
+                self.imu_pub.publish(imu_msg)
+            
+                
 
     def subscribe(self):
         """Subscribes to the messages you are interested in"""

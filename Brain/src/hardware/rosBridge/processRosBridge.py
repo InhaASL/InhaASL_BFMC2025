@@ -3,7 +3,7 @@ if __name__ == "__main__":
     sys.path.insert(0, "../../..")
 
 import rospy
-
+import time
 from src.templates.workerprocess import WorkerProcess
 from src.hardware.serialhandler.threads.filehandler import FileHandler
 from src.hardware.rosBridge.threads.threadRosBridgeRead import threadRosBridgeRead
@@ -19,7 +19,7 @@ class processRosBridge(WorkerProcess):
 
     def __init__(self, queueList, logging=False, debugging=False):
         logFile = "RosHistoryFile.txt"
-        rospy.init_node("ROS_Bridge", anonymous=True)
+        rospy.init_node("ROS_Bridge", anonymous=True, disable_signals=True)
 
         self.historyFile = FileHandler(logFile)
         self.queuesList = queueList
@@ -30,11 +30,8 @@ class processRosBridge(WorkerProcess):
     def run(self):
         """Apply the initializing methods and start the threads."""
         super(processRosBridge, self).run()
+        
 
-
-    def stop(self):
-        super(processRosBridge).stop()
-        rospy.signal_shutdown("Process shutdown requested")
 
     def _init_threads(self):
         """Create the rosBridge Publisher thread and add to the list of threads."""
@@ -43,24 +40,3 @@ class processRosBridge(WorkerProcess):
         rosBridgeWriteTh = threadRosBridgeWrite(self.queuesList, self.logging, self.debugging)
         self.threads.append(rosBridgeWriteTh)
 
-# TEST CODE
-# [ python3 processRosBridge.py ] in terminal
-if __name__ == "__main__":
-    from multiprocessing import Queue, Pipe
-    import logging
-    import time
-
-    allProcesses = list()
-    debugg = True
-    queueList = {
-        "Critical": Queue(),
-        "Warning": Queue(),
-        "General": Queue(),
-        "Config": Queue(),
-    }
-    logger = logging.getLogger()
-    process = processRosBridge(queueList, logger, debugg)
-    process.daemon = True
-    process.start()
-    time.sleep(4)
-    process.stop()
