@@ -72,12 +72,14 @@ class WorkerProcess(Process):
             th.start()
             
         # Wait to set internal flag true for the event
-        while not self._blocker.is_set():
-            try:
+        try:
+            # Wait to set internal flag true for the event
+            while not self._blocker.is_set():
                 self._blocker.wait(1)
-            except KeyboardInterrupt as e: 
-                print(e)
-
+        except KeyboardInterrupt:
+            print("Keyboard interrupt received. Stopping the process.")
+            self.stop()
+            
         for th in self.threads:
             if hasattr(th, "stop") and callable(getattr(th, "stop")):
                 th.stop()

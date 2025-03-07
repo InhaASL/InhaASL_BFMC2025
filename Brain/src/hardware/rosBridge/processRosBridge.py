@@ -31,7 +31,10 @@ class processRosBridge(WorkerProcess):
         """Apply the initializing methods and start the threads."""
         super(processRosBridge, self).run()
 
-        self.historyFile.close()
+
+    def stop(self):
+        super(processRosBridge).stop()
+        rospy.signal_shutdown("Process shutdown requested")
 
     def _init_threads(self):
         """Create the rosBridge Publisher thread and add to the list of threads."""

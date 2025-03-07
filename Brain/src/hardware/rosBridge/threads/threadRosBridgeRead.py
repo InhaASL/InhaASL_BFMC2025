@@ -1,6 +1,7 @@
 import rospy
 from sensor_msgs.msg import Imu
 import tf
+import json
 from src.templates.threadwithstop import ThreadWithStop
 from src.utils.messages.allMessages import (
     BatteryLvl,
@@ -47,6 +48,7 @@ class threadRosBridgeRead(ThreadWithStop):
             if enableButton is not None and enableButton:
                 imuData = self.imuDataSubscriber.receive()
                 if imuData is not None:
+                    imuData = json.loads(imuData)
                     roll = float(imuData["roll"])
                     pitch = float(imuData["pitch"])
                     yaw = float(imuData["yaw"])
