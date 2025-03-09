@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import rospy
 from sensor_msgs.msg import Imu
 import tf
@@ -33,17 +35,22 @@ class threadRosBridgeRead(ThreadWithStop):
         self.queuesList = queueList
         self.logging = logging
         self.debugging = debugging
-        self.subscribe()
-        
         self.imu_pub = rospy.Publisher('/imu', Imu, queue_size= 10)
-        self.ros_imu = Imu()
+        # self.subscribe()
+        self.rate = rospy.Rate(10)
+        
         #self.cur_state_pub = rospy.Publisher('/car_cur_state', CarState, queue_size=10)
         #ADD CAR STATE LATER
-        
+
         super(threadRosBridgeRead, self).__init__()
 
+
+
     def run(self):
-        while self._running:
+        
+        
+        self.subscribe()
+        while self._running and not rospy.is_shutdown():
             imuData = self.imuDataSubscriber.receive()
             
             if imuData is not None:
@@ -56,11 +63,11 @@ class threadRosBridgeRead(ThreadWithStop):
                 accelz = float(imuData["accelz"])
 
                 quaternion = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
-                # print(quaternion)
+
                 # IMU 메시지 생성
                 imu_msg = Imu()
                 imu_msg.header.stamp = rospy.Time.now()
-                imu_msg.header.frame_id = "imu"  # 센서 프레임 지정
+                imu_msg.header.frame_id = 'imu_link'  # 센서 프레임 지정
 
                 # Orientation (쿼터니언)
                 imu_msg.orientation.x = quaternion[0]
@@ -79,8 +86,10 @@ class threadRosBridgeRead(ThreadWithStop):
                 imu_msg.angular_velocity.z = 0.0
                 
                 # 메시지 퍼블리시
-                print(imu_msg)
                 self.imu_pub.publish(imu_msg)
+
+            self.rate.sleep() 
+
             
                 
 

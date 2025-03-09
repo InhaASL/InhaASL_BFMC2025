@@ -15,6 +15,12 @@ class threadRosBridgeWrite(ThreadWithStop):
     """ROS → BFMC 통신 스레드.
     /control, /kl 토픽 데이터를 받아 BFMC 쪽으로 전달합니다."""
 
+    # ROS SPEED RANGE : (FLOAT) -5 ~ 5 [M/S]
+    # BFMC SPEED RANGE : (INT) -500 ~ 500 [MM/S]
+
+    # ROS STEER RANGE : (FLOAT) -0.401426 ~ 0.401426 [RAD] (ACKERMANN MSG)
+    # BFMC STEER RANGE : (INT) -230 ~ 230 [DEGREE * 10]
+
     def __init__(self, queueList, logging, debugging=False):
         self.queuesList = queueList
         self.logging = logging
@@ -47,7 +53,7 @@ class threadRosBridgeWrite(ThreadWithStop):
         self._spin_thread.start()
         
         # 메인 루프: _running이 True이고, ROS가 죽지 않았을 동안 주기적 작업 수행
-        rate = rospy.Rate(10)  # 10 Hz
+        rate = rospy.Rate(50)  # 10 Hz
         while self._running and not rospy.is_shutdown():
             # 만약 speed/steer 값이 들어왔다면 BFMC 쪽으로 전송
             if self.bfmc_speed is not None and self.bfmc_steer is not None:
@@ -61,8 +67,6 @@ class threadRosBridgeWrite(ThreadWithStop):
             # 0.1초(=10Hz)마다 콜백 및 종료 상태 점검
             rate.sleep()
 
-        # while 루프를 빠져나오면 정리 로직을 수행할 수도 있음
-        rospy.loginfo("threadRosBridgeWrite has exited run() loop.")
 
     def stop(self):
         """스레드 종료 루틴"""
@@ -75,11 +79,12 @@ class threadRosBridgeWrite(ThreadWithStop):
         if self._spin_thread.is_alive():
             self._spin_thread.join()
 
-        rospy.loginfo("threadRosBridgeWrite stopped properly.")
+        # rospy.loginfo("threadRosBridgeWrite stopped properly.")
 
     def ack_cb(self, msg):
-        ros_speed = msg.AckermannDrive.speed
-        ros_steer = msg.AckermannDrive.steering_angle
+        # print(msg)
+        ros_speed = msg.drive.speed
+        ros_steer = msg.drive.steering_angle
         self.bfmc_speed, self.bfmc_steer = self.msg_converter(ros_speed, ros_steer)
 
     def kl_cb(self, msg):
@@ -87,5 +92,5 @@ class threadRosBridgeWrite(ThreadWithStop):
 
     def msg_converter(self, speed_val, steer_val):
         conv_speed = int(speed_val * 100)
-        conv_steer = int(math.degrees(steer_val))
+        conv_steer = int(math.degrees(steer_val) * 10)
         return conv_speed, conv_steer

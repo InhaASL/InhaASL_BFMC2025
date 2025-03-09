@@ -1,6 +1,9 @@
+#!/usr/bin/env python3
+
 if __name__ == "__main__":
     import sys
     sys.path.insert(0, "../../..")
+
 
 import rospy
 import time
@@ -19,7 +22,6 @@ class processRosBridge(WorkerProcess):
 
     def __init__(self, queueList, logging=False, debugging=False):
         logFile = "RosHistoryFile.txt"
-        rospy.init_node("ROS_Bridge", anonymous=True, disable_signals=True)
 
         self.historyFile = FileHandler(logFile)
         self.queuesList = queueList
@@ -29,6 +31,7 @@ class processRosBridge(WorkerProcess):
 
     def run(self):
         """Apply the initializing methods and start the threads."""
+        rospy.init_node("ROS_Bridge", anonymous=False, disable_signals=True) 
         super(processRosBridge, self).run()
         
 
@@ -39,4 +42,5 @@ class processRosBridge(WorkerProcess):
         self.threads.append(rosBridgeReadTh)
         rosBridgeWriteTh = threadRosBridgeWrite(self.queuesList, self.logging, self.debugging)
         self.threads.append(rosBridgeWriteTh)
+
 

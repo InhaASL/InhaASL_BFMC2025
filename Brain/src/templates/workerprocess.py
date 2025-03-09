@@ -77,7 +77,7 @@ class WorkerProcess(Process):
             while not self._blocker.is_set():
                 self._blocker.wait(1)
         except KeyboardInterrupt:
-            print("Keyboard interrupt received. Stopping the process.")
+            # print("Keyboard interrupt received. Stopping the process.")
             self.stop()
             
         for th in self.threads:

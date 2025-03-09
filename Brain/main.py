@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright (c) 2019, Bosch Engineering Center Cluj and BFMC orginazers
 # All rights reserved.
 
@@ -52,6 +54,7 @@ logging.basicConfig(level=logging.INFO)
 
 # ===================================== PROCESS IMPORTS ==================================
 
+import rospy
 from src.gateway.processGateway import processGateway
 from src.dashboard.processDashboard import processDashboard
 # from src.hardware.camera.processCamera import processCamera
@@ -130,6 +133,8 @@ if RosBridge:
 
 print(allProcesses)
 # ===================================== START PROCESSES ==================================
+# rospy.init_node("ROS_Bridge", anonymous=False, disable_signals=True) # disable_signals=True 제거 
+
 for process in allProcesses:
     process.daemon = True
     process.start()
@@ -146,7 +151,7 @@ def verify_processes(process_list):
             print(f"[{idx}] {proc.__class__.__name__} 프로세스가 동작하지 않습니다!")
     print("=== 프로세스 상태 점검 종료 ===")
 
-verify_processes(allProcesses)
+# verify_processes(allProcesses)
 
 c4_bomb = r"""
   _______________________
@@ -179,7 +184,7 @@ except KeyboardInterrupt:
     """
 
     print(big_text)
-
+    '''
 # -------- 프로세스 종료 & 디버깅 로깅 --------
     print("[메인] 모든 자식 프로세스 중지 시도 (역순)...\n")
     for proc in reversed(allProcesses):
@@ -202,7 +207,7 @@ except KeyboardInterrupt:
         print(f"→ Gateway (PID={processGateway.pid}) 여전히 종료되지 않음!")
     else:
         print("→ Gateway 정상적으로 종료됨")
-
+    '''
 
     big_text = """
     PPPP   RRRR   EEEEE  SSSS  SSSS       CCCC  TTTTT RRRR    L          ++      CCCC      !!! 
