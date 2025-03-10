@@ -30,59 +30,44 @@ class threadRosBridgeWrite(ThreadWithStop):
         self.bfmc_steer = None
         self.kl_state = None
 
-        # ROS 토픽 구독 설정
         rospy.Subscriber('/control', AckermannDriveStamped, self.ack_cb)
         rospy.Subscriber('/kl', String, self.kl_cb)
 
-        # BFMC 측으로 보낼 메시지 Sender
         self.speedMotorSender = messageHandlerSender(self.queuesList, ROSSpeedMotor)
         self.steerMotorSender = messageHandlerSender(self.queuesList, ROSSteerMotor)
         self.klSender = messageHandlerSender(self.queuesList, ROSKlem)
 
-        # spin() 전용 스레드를 하나 더 만들어 줌
         self._spin_thread = threading.Thread(target=self._spin_ros, daemon=True)
         
         super(threadRosBridgeWrite, self).__init__()
 
     def _spin_ros(self):
-        """rosspin 전용 스레드 함수"""
         rospy.spin()
 
     def run(self):
-        # spin() 스레드를 시작
         self._spin_thread.start()
         
-        # 메인 루프: _running이 True이고, ROS가 죽지 않았을 동안 주기적 작업 수행
-        rate = rospy.Rate(50)  # 10 Hz
+        rate = rospy.Rate(50) 
         while self._running and not rospy.is_shutdown():
-            # 만약 speed/steer 값이 들어왔다면 BFMC 쪽으로 전송
             if self.bfmc_speed is not None and self.bfmc_steer is not None:
                 self.speedMotorSender.send(str(self.bfmc_speed))
                 self.steerMotorSender.send(str(self.bfmc_steer))
 
-            # kl_state가 존재하면 BFMC 쪽으로 전송
             if self.kl_state is not None:
                 self.klSender.send(self.kl_state)
 
-            # 0.1초(=10Hz)마다 콜백 및 종료 상태 점검
             rate.sleep()
 
 
     def stop(self):
-        """스레드 종료 루틴"""
-        # 1) 자신 스레드의 루프를 빠져나오게 함
         self._running = False
-        # 2) ROS 노드에게 종료 신호
         rospy.signal_shutdown("Stopping threadRosBridgeWrite")
 
-        # 3) spin() 스레드가 종료되길 기다림
         if self._spin_thread.is_alive():
             self._spin_thread.join()
 
-        # rospy.loginfo("threadRosBridgeWrite stopped properly.")
 
     def ack_cb(self, msg):
-        # print(msg)
         ros_speed = msg.drive.speed
         ros_steer = msg.drive.steering_angle
         self.bfmc_speed, self.bfmc_steer = self.msg_converter(ros_speed, ros_steer)

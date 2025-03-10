@@ -14,7 +14,9 @@ from src.utils.messages.allMessages import (
     ResourceMonitor,
     CurrentSpeed,
     CurrentSteer,
-    WarningSignal
+    WarningSignal,
+    Semaphores,
+    Location
 )
 from src.utils.messages.messageHandlerSubscriber import messageHandlerSubscriber
 
@@ -40,19 +42,15 @@ class threadRosBridgeRead(ThreadWithStop):
         self.rate = rospy.Rate(10)
         
         #self.cur_state_pub = rospy.Publisher('/car_cur_state', CarState, queue_size=10)
-        #ADD CAR STATE LATER
+        #To do: add car state msg
 
         super(threadRosBridgeRead, self).__init__()
 
-
-
     def run(self):
         
-        
-        self.subscribe()
         while self._running and not rospy.is_shutdown():
+            #imu receiver
             imuData = self.imuDataSubscriber.receive()
-            
             if imuData is not None:
                 imuData = ast.literal_eval(imuData)
                 roll = float(imuData["roll"])
@@ -64,35 +62,36 @@ class threadRosBridgeRead(ThreadWithStop):
 
                 quaternion = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
 
-                # IMU 메시지 생성
                 imu_msg = Imu()
                 imu_msg.header.stamp = rospy.Time.now()
                 imu_msg.header.frame_id = 'imu_link'  # 센서 프레임 지정
 
-                # Orientation (쿼터니언)
                 imu_msg.orientation.x = quaternion[0]
                 imu_msg.orientation.y = quaternion[1]
                 imu_msg.orientation.z = quaternion[2]
                 imu_msg.orientation.w = quaternion[3]
 
-                # Linear Acceleration
                 imu_msg.linear_acceleration.x = accelx
                 imu_msg.linear_acceleration.y = accely
                 imu_msg.linear_acceleration.z = accelz
 
-                # Angular Velocity (필요한 경우 설정)
                 imu_msg.angular_velocity.x = 0.0
                 imu_msg.angular_velocity.y = 0.0
                 imu_msg.angular_velocity.z = 0.0
                 
-                # 메시지 퍼블리시
                 self.imu_pub.publish(imu_msg)
-
-            self.rate.sleep() 
+            #location(nav) receiver
+            locationData = self.locationSubscriber.receive()
+            if locationData is not None:
+                print(locationData)
+            #semaphores(traffic) receiver
+            semaphoresData = self.semaphoresSubscriber.receive()
+            if semaphoresData is not None:
+                print(semaphoresData)
+            
 
             
-                
-
+            
     def subscribe(self):
         """Subscribes to the messages you are interested in"""
 
@@ -105,4 +104,6 @@ class threadRosBridgeRead(ThreadWithStop):
         # self.currentSpeedSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSpeed, "lastOnly", True)
         # self.currentSteerSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSteer, "lastOnly", True)
         # self.warningSubscriber = messageHandlerSubscriber(self.queuesList, WarningSignal, "lastOnly", True)
+        self.semaphoresSubscriber = messageHandlerSubscriber(self.queuesList, Semaphores, "lastOnly", True)
+        self.locationSubscriber = messageHandlerSubscriber(self.queuesList, Location, "lastOnly", True)
 
