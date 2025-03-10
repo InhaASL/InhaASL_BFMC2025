@@ -98,7 +98,6 @@ class threadRead(ThreadWithStop):
                 try:
                     self.buff = self.serialCon.readline().decode("ascii")
                     self.sendqueue(self.buff)
-                    # print("시리얼 헨들러 스레드 실행 ") # 실행확인 
                 except Exception as e:
                     print("ThreadRead -> run method:", e)
             

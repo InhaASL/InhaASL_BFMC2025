@@ -30,52 +30,48 @@ class threadRosBridgeWrite(ThreadWithStop):
         self.bfmc_steer = None
         self.kl_state = None
 
+        self.max_speed = 500
+        self.min_speed = -500
+
+        self.max_steer = 230
+        self.min_steer = -230
+
         rospy.Subscriber('/control', AckermannDriveStamped, self.ack_cb)
         rospy.Subscriber('/kl', String, self.kl_cb)
 
         self.speedMotorSender = messageHandlerSender(self.queuesList, ROSSpeedMotor)
         self.steerMotorSender = messageHandlerSender(self.queuesList, ROSSteerMotor)
         self.klSender = messageHandlerSender(self.queuesList, ROSKlem)
-
-        self._spin_thread = threading.Thread(target=self._spin_ros, daemon=True)
         
         super(threadRosBridgeWrite, self).__init__()
 
-    def _spin_ros(self):
-        rospy.spin()
-
     def run(self):
-        self._spin_thread.start()
+        rospy.sleep(1)
         
-        rate = rospy.Rate(50) 
-        while self._running and not rospy.is_shutdown():
-            if self.bfmc_speed is not None and self.bfmc_steer is not None:
-                self.speedMotorSender.send(str(self.bfmc_speed))
-                self.steerMotorSender.send(str(self.bfmc_steer))
-
-            if self.kl_state is not None:
-                self.klSender.send(self.kl_state)
-
-            rate.sleep()
-
-
     def stop(self):
         self._running = False
         rospy.signal_shutdown("Stopping threadRosBridgeWrite")
-
-        if self._spin_thread.is_alive():
-            self._spin_thread.join()
-
 
     def ack_cb(self, msg):
         ros_speed = msg.drive.speed
         ros_steer = msg.drive.steering_angle
         self.bfmc_speed, self.bfmc_steer = self.msg_converter(ros_speed, ros_steer)
+        # RUN IN THE SAFE AREA
+        self.bfmc_speed = self.clip(self.bfmc_speed, self.min_speed, self.max_speed)
+        self.bfmc_steer = self.clip(self.bfmc_steer, self.min_steer, self.max_steer)
+        self.speedMotorSender.send(str(self.bfmc_speed))
+        self.steerMotorSender.send(str(self.bfmc_steer))
 
     def kl_cb(self, msg):
         self.kl_state = msg.data
+        if self.kl_state == "30" or "15" or "0":
+            self.klSender.send(self.kl_state)
+
 
     def msg_converter(self, speed_val, steer_val):
         conv_speed = int(speed_val * 100)
         conv_steer = int(math.degrees(steer_val) * 10)
         return conv_speed, conv_steer
+    
+    def clip(self, value, min_val, max_val):
+        return max(min_val, min(value, max_val))
