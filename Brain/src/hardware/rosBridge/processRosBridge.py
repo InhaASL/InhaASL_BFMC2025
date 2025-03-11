@@ -10,7 +10,7 @@ import time
 from src.templates.workerprocess import WorkerProcess
 from src.hardware.serialhandler.threads.filehandler import FileHandler
 from src.hardware.rosBridge.threads.threadRosBridgeRead import threadRosBridgeRead
-from src.hardware.rosBridge.threads.threadRosBridgeWirte import threadRosBridgeWrite
+from src.hardware.rosBridge.threads.threadRosBridgeWrite import threadRosBridgeWrite
 
 class processRosBridge(WorkerProcess):
     """This process Handle RosBridge which connnect between ROS and SerialHandler
@@ -33,7 +33,7 @@ class processRosBridge(WorkerProcess):
         """Apply the initializing methods and start the threads."""
         rospy.init_node("ROS_Bridge", anonymous=False, disable_signals=True) 
         super(processRosBridge, self).run()
-        
+
 
 
     def _init_threads(self):

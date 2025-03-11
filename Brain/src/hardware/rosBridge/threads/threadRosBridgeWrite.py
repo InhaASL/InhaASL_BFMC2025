@@ -30,26 +30,31 @@ class threadRosBridgeWrite(ThreadWithStop):
         self.bfmc_steer = None
         self.kl_state = None
 
+        self.prev_speed = 0
+        self.prev_steer = 0
+
         self.max_speed = 500
         self.min_speed = -500
 
         self.max_steer = 230
         self.min_steer = -230
 
-        rospy.Subscriber('/control', AckermannDriveStamped, self.ack_cb)
+        rospy.Subscriber('/ackermann_cmd_mux/output', AckermannDriveStamped, self.ack_cb)
         rospy.Subscriber('/kl', String, self.kl_cb)
 
         self.speedMotorSender = messageHandlerSender(self.queuesList, ROSSpeedMotor)
         self.steerMotorSender = messageHandlerSender(self.queuesList, ROSSteerMotor)
         self.klSender = messageHandlerSender(self.queuesList, ROSKlem)
         
+
         super(threadRosBridgeWrite, self).__init__()
 
+
     def run(self):
-        rospy.sleep(1)
+        rospy.spin()
+
         
     def stop(self):
-        self._running = False
         rospy.signal_shutdown("Stopping threadRosBridgeWrite")
 
     def ack_cb(self, msg):
@@ -59,8 +64,12 @@ class threadRosBridgeWrite(ThreadWithStop):
         # RUN IN THE SAFE AREA
         self.bfmc_speed = self.clip(self.bfmc_speed, self.min_speed, self.max_speed)
         self.bfmc_steer = self.clip(self.bfmc_steer, self.min_steer, self.max_steer)
-        self.speedMotorSender.send(str(self.bfmc_speed))
-        self.steerMotorSender.send(str(self.bfmc_steer))
+        if(self.bfmc_speed != self.prev_speed):
+            self.speedMotorSender.send(str(self.bfmc_speed))
+            self.prev_speed = self.bfmc_speed
+        if(self.bfmc_steer != self.prev_steer):
+            self.steerMotorSender.send(str(self.bfmc_steer))
+            self.prev_steer = self.bfmc_steer
 
     def kl_cb(self, msg):
         self.kl_state = msg.data

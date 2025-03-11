@@ -38,7 +38,7 @@ class threadRosBridgeRead(ThreadWithStop):
         self.logging = logging
         self.debugging = debugging
         self.imu_pub = rospy.Publisher('/imu', Imu, queue_size= 10)
-        # self.subscribe()
+        self.subscribe()
         self.rate = rospy.Rate(10)
         
         #self.cur_state_pub = rospy.Publisher('/car_cur_state', CarState, queue_size=10)
@@ -90,14 +90,14 @@ class threadRosBridgeRead(ThreadWithStop):
                 print(f"cur_steerData:{cur_steerData}")
 
             #battery_operating time receiver
-            warningData = self.warningSubscriber.receive()
-            if warningData is not None:
-                print(f"warningData:{warningData}")
+            # warningData = self.warningSubscriber.receive()
+            # if warningData is not None:
+            #     print(f"warningData:{warningData}")
 
             #battery_voltage level receiver
-            batteryLvlData = self.batteryLvlSubscriber.receive()
-            if batteryLvlData is not None:
-                print(f"batterLvlData:{batteryLvlData}")    
+            # batteryLvlData = self.batteryLvlSubscriber.receive()
+            # if batteryLvlData is not None:
+            #     print(f"batterLvlData:{batteryLvlData}")    
              
             #location(nav) receiver
             locationData = self.locationSubscriber.receive()
@@ -115,14 +115,14 @@ class threadRosBridgeRead(ThreadWithStop):
         """Subscribes to the messages you are interested in"""
 
         self.enableButtonSubscriber = messageHandlerSubscriber(self.queuesList, EnableButton, "lastOnly", True)
-        self.batteryLvlSubscriber = messageHandlerSubscriber(self.queuesList, BatteryLvl, "lastOnly", True)
+        # self.batteryLvlSubscriber = messageHandlerSubscriber(self.queuesList, BatteryLvl, "lastOnly", True)
         # self.instantConsumptionSubscriber = messageHandlerSubscriber(self.queuesList, InstantConsumption, "lastOnly", True)
         self.imuDataSubscriber = messageHandlerSubscriber(self.queuesList, ImuData, "lastOnly", True)
         # self.imuAckSubscriber = messageHandlerSubscriber(self.queuesList, ImuAck, "lastOnly", True)
         # self.resourceMonitorSubscriber = messageHandlerSubscriber(self.queuesList, ResourceMonitor, "lastOnly", True)
         self.currentSpeedSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSpeed, "lastOnly", True)
         self.currentSteerSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSteer, "lastOnly", True)
-        self.warningSubscriber = messageHandlerSubscriber(self.queuesList, WarningSignal, "lastOnly", True)
+        # self.warningSubscriber = messageHandlerSubscriber(self.queuesList, WarningSignal, "lastOnly", True)
         self.semaphoresSubscriber = messageHandlerSubscriber(self.queuesList, Semaphores, "lastOnly", True)
         self.locationSubscriber = messageHandlerSubscriber(self.queuesList, Location, "lastOnly", True)
 
