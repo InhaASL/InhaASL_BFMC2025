@@ -167,19 +167,19 @@ class threadWrite(ThreadWithStop):
                 if ROSklRecv is not None:
                     if self.debugger:
                         self.logger.info(klRecv)
-                    if klRecv == "30":
+                    if ROSklRecv == "30":
                         self.running = True
                         self.engineEnabled = True
                         command = {"action": "kl", "mode": 30}
                         self.sendToSerial(command)
                         self.loadConfig("sensors")
-                    elif klRecv == "15":
+                    elif ROSklRecv == "15":
                         self.running = True
                         self.engineEnabled = False
                         command = {"action": "kl", "mode": 15}
                         self.sendToSerial(command)
                         self.loadConfig("sensors")
-                    elif klRecv == "0":
+                    elif ROSklRecv == "0":
                         self.running = False
                         self.engineEnabled = False
                         command = {"action": "kl", "mode": 0}
