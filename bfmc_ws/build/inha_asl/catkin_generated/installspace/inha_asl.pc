@@ -1,8 +1,0 @@
-prefix=/home/kim/BFMC/InhaASL_BFMC2025/bfmc_ws/install
-
-Name: inha_asl
-Description: Description of inha_asl
-Version: 0.0.1
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 
