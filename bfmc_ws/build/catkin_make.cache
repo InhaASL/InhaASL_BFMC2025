@@ -1,0 +1,2 @@
+inha_asl:racecar/ackermann_cmd_mux:racecar/racecar
+-DCATKIN_DEVEL_PREFIX=/home/kim/BFMC/InhaASL_BFMC2025/bfmc_ws/devel -DCMAKE_INSTALL_PREFIX=/home/kim/BFMC/InhaASL_BFMC2025/bfmc_ws/install -G Unix Makefiles

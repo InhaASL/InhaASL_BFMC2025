@@ -29,35 +29,35 @@
 from enum import Enum
 
 ####################################### processCamera #######################################
-class mainCamera(Enum):
-    Queue = "General"
-    Owner = "threadCamera"
-    msgID = 1
-    msgType = "str"
+# class mainCamera(Enum):
+#     Queue = "General"
+#     Owner = "threadCamera"
+#     msgID = 1
+#     msgType = "str"
 
-class serialCamera(Enum):
-    Queue = "General"
-    Owner = "threadCamera"
-    msgID = 2
-    msgType = "str"
+# class serialCamera(Enum):
+#     Queue = "General"
+#     Owner = "threadCamera"
+#     msgID = 2
+#     msgType = "str"
 
-class Recording(Enum):
-    Queue = "General"
-    Owner = "threadCamera"
-    msgID = 3
-    msgType = "bool"
+# class Recording(Enum):
+#     Queue = "General"
+#     Owner = "threadCamera"
+#     msgID = 3
+#     msgType = "bool"
 
-class Signal(Enum):
-    Queue = "General"
-    Owner = "threadCamera"
-    msgID = 4
-    msgType = "str"
+# class Signal(Enum):
+#     Queue = "General"
+#     Owner = "threadCamera"
+#     msgID = 4
+#     msgType = "str"
 
-class LaneKeeping(Enum):
-    Queue = "General"
-    Owner = "threadCamera" # here you will send an offset of the car position between the lanes of the road + - from 0 point to dashboard
-    msgID = 5
-    msgType = "int"
+# class LaneKeeping(Enum):
+#     Queue = "General"
+#     Owner = "threadCamera" # here you will send an offset of the car position between the lanes of the road + - from 0 point to dashboard
+#     msgID = 5
+#     msgType = "int"
 
 ################################# processCarsAndSemaphores ##################################
 class Cars(Enum):

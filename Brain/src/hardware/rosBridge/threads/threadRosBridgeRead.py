@@ -80,7 +80,7 @@ class threadRosBridgeRead(ThreadWithStop):
                 imu_msg.angular_velocity.z = 0.0
                 
                 self.imu_pub.publish(imu_msg)
-            #car_speed&steer receiver
+            '''car_speed&steer receiver'''
             cur_speedData = self.currentSpeedSubscriber.receive()
             if cur_speedData is not None:
                 print(f"cur_speedData:{cur_speedData}")
@@ -89,21 +89,21 @@ class threadRosBridgeRead(ThreadWithStop):
             if cur_steerData is not None:
                 print(f"cur_steerData:{cur_steerData}")
 
-            #battery_operating time receiver
+            '''battery_operating time receiver'''
             # warningData = self.warningSubscriber.receive()
             # if warningData is not None:
             #     print(f"warningData:{warningData}")
 
-            #battery_voltage level receiver
+            '''battery_voltage level receiver'''
             # batteryLvlData = self.batteryLvlSubscriber.receive()
             # if batteryLvlData is not None:
             #     print(f"batterLvlData:{batteryLvlData}")    
              
-            #location(nav) receiver
+            '''location(nav) receiver'''
             locationData = self.locationSubscriber.receive()
             if locationData is not None:
                 print(f"locationData:{locationData}")
-            #semaphores(traffic) receiver
+            '''semaphores(traffic) receiver'''
             semaphoresData = self.semaphoresSubscriber.receive()
             if semaphoresData is not None:
                 print(f"semaphoresData:{semaphoresData}")
