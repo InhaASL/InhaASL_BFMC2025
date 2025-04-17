@@ -2,8 +2,10 @@
 
 import rospy
 from sensor_msgs.msg import Imu
+from ackermann_msgs.msg import AckermannDriveStamped
 import tf
 import ast
+import math
 from src.templates.threadwithstop import ThreadWithStop
 from src.utils.messages.allMessages import (
     BatteryLvl,
@@ -37,9 +39,14 @@ class threadRosBridgeRead(ThreadWithStop):
         self.queuesList = queueList
         self.logging = logging
         self.debugging = debugging
-        self.imu_pub = rospy.Publisher('/imu', Imu, queue_size= 10)
+        self.imu_pub = rospy.Publisher('/imu', Imu, queue_size= 3)
+        self.speed_pub = rospy.Publisher('/current_speed', AckermannDriveStamped, queue_size= 3)
         self.subscribe()
-        self.rate = rospy.Rate(10)
+        self.rate = rospy.Rate(60)
+
+        self.drive_msg = AckermannDriveStamped()
+        self.current_speed = 0
+        self.current_steer = 0
         
         #self.cur_state_pub = rospy.Publisher('/car_cur_state', CarState, queue_size=10)
         #To do: add car state msg
@@ -64,7 +71,7 @@ class threadRosBridgeRead(ThreadWithStop):
 
                 imu_msg = Imu()
                 imu_msg.header.stamp = rospy.Time.now()
-                imu_msg.header.frame_id = 'imu_link'  # 센서 프레임 지정
+                imu_msg.header.frame_id = 'imu_link' 
 
                 imu_msg.orientation.x = quaternion[0]
                 imu_msg.orientation.y = quaternion[1]
@@ -83,11 +90,17 @@ class threadRosBridgeRead(ThreadWithStop):
             #car_speed&steer receiver
             cur_speedData = self.currentSpeedSubscriber.receive()
             if cur_speedData is not None:
-                print(f"cur_speedData:{cur_speedData}")
+                self.current_speed = cur_speedData
             
             cur_steerData = self.currentSteerSubscriber.receive()
             if cur_steerData is not None:
-                print(f"cur_steerData:{cur_steerData}")
+                self.current_steer = cur_steerData
+
+            self.drive_msg.header.stamp = rospy.Time.now()
+            self.drive_msg.header.frame_id = "base_link"
+            self.drive_msg.drive.speed = self.current_speed / 100
+            self.drive_msg.drive.steering_angle = math.radians(self.current_steer / 10)
+            self.speed_pub.publish(self.drive_msg)
 
             #battery_operating time receiver
             # warningData = self.warningSubscriber.receive()
@@ -107,6 +120,8 @@ class threadRosBridgeRead(ThreadWithStop):
             semaphoresData = self.semaphoresSubscriber.receive()
             if semaphoresData is not None:
                 print(f"semaphoresData:{semaphoresData}")
+
+            self.rate.sleep()
             
 
             

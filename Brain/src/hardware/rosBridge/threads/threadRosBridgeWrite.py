@@ -39,6 +39,8 @@ class threadRosBridgeWrite(ThreadWithStop):
         self.max_steer = 230
         self.min_steer = -230
 
+        self.count = 0
+
         rospy.Subscriber('/ackermann_cmd_mux/output', AckermannDriveStamped, self.ack_cb)
         rospy.Subscriber('/kl', String, self.kl_cb)
 
@@ -64,12 +66,15 @@ class threadRosBridgeWrite(ThreadWithStop):
         # RUN IN THE SAFE AREA
         self.bfmc_speed = self.clip(self.bfmc_speed, self.min_speed, self.max_speed)
         self.bfmc_steer = self.clip(self.bfmc_steer, self.min_steer, self.max_steer)
-        if(self.bfmc_speed != self.prev_speed):
+        if(self.bfmc_speed != self.prev_speed) or self.count == 10:
             self.speedMotorSender.send(str(self.bfmc_speed))
+            # print(f"current_speed:", self.bfmc_speed)
             self.prev_speed = self.bfmc_speed
+            self.count = 0
         if(self.bfmc_steer != self.prev_steer):
             self.steerMotorSender.send(str(self.bfmc_steer))
             self.prev_steer = self.bfmc_steer
+        self.count += 1
 
     def kl_cb(self, msg):
         self.kl_state = msg.data
