@@ -21,13 +21,13 @@ private:
 public:
     AckermannOdom() : x_(0.0), y_(0.0), theta_(0.0)
     {
-        nh_.param("wheel_base", wheel_base_, 0.5);   
-        nh_.param("use_tf", use_tf_, false);          
-        nh_.param("drive_gain", driving_gain_, 1.0);
-        nh_.param("steering_gain", steering_gain_, 1.0);
+        nh_.param("wheel_base", wheel_base_, 0.26);   
+        nh_.param("use_tf", use_tf_, true);          
+        nh_.param("drive_gain", driving_gain_, 9.05);
+        nh_.param("steering_gain", steering_gain_, 11.0);
 
         odom_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 50);
-        drive_sub_ = nh_.subscribe("ackermann_drive", 10, &AckermannOdom::driveCallback, this);
+        drive_sub_ = nh_.subscribe("current_speed", 10, &AckermannOdom::driveCallback, this);
 
         last_time_ = ros::Time::now();
     }
@@ -35,17 +35,17 @@ public:
     void driveCallback(const ackermann_msgs::AckermannDriveStamped::ConstPtr& msg)
     {
         double v = msg->drive.speed;
-        double steering_angle = msg->drive.steering_angle;
+        double steering_angle = -msg->drive.steering_angle;
 
         ros::Time current_time = ros::Time::now();
         double dt = (current_time - last_time_).toSec();
         last_time_ = current_time;
 
         double delta_theta = (v / wheel_base_) * tan(steering_angle) * dt;
-        theta_ += delta_theta * steering_gain_;
+        theta_ += delta_theta / steering_gain_;
 
-        double dx = v * cos(theta_) * dt * driving_gain_;
-        double dy = v * sin(theta_) * dt * driving_gain_;
+        double dx = v * cos(theta_) * dt / driving_gain_;
+        double dy = v * sin(theta_) * dt / driving_gain_;
 
         x_ += dx;
         y_ += dy;

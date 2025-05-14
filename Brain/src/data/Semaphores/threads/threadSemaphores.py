@@ -29,6 +29,7 @@
 from src.templates.threadwithstop import ThreadWithStop
 from twisted.internet import reactor
 from src.data.Semaphores.threads.udpListener import udpListener
+import logging
 
 
 class threadSemaphores(ThreadWithStop):
@@ -55,6 +56,7 @@ class threadSemaphores(ThreadWithStop):
         """
         Run the thread.
         """
+        self.logger.info("threadSemaphore 시작했음 (debug=%s)",self.debugging)
         self.reactor.run(installSignalHandlers=False)
 
     # ====================================== STOP ==========================================

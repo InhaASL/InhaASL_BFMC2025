@@ -52,7 +52,9 @@ class processTrafficCommunication(WorkerProcess):
         self.queuesList = queueList
         self.logging = logging
         self.shared_memory = sharedMem()
-        self.filename = "src/data/TrafficCommunication/useful/publickey_server_test.pem"
+        self.filename = "src/data/TrafficCommunication/useful/publickey_server_test.pem" #테스트용, 실제 대회에서는 test를 제거 
+        # self.filename = "src/data/TrafficCommunication/useful/privatekey_server_test.pem"
+
         self.deviceID = deviceID
         self.frequency = frequency
         self.debugging = debugging
@@ -90,9 +92,14 @@ class processTrafficCommunication(WorkerProcess):
 if __name__ == "__main__":
     from multiprocessing import Queue
     import time
+    import logging
 
     shared_memory = sharedMem()
     locsysReceivePipe, locsysSendPipe = Pipe(duplex=False)
+
+
+    # logging.basicConfig(level=logging.DEBUG,format = "%(asctime)s [%(levelname)s] %(name)s : %(message)s")
+    # logger = logging.getLogger("TrafficComm")
     queueList = {
         "Critical": Queue(),
         "Warning": Queue(),
@@ -103,9 +110,12 @@ if __name__ == "__main__":
     filename = "useful/publickey_server_test.pem"
     deviceID = 3
     frequency = 0.4
+    # frequency = 1.0
     traffic_communication = threadTrafficCommunication(
         shared_memory, queueList, deviceID, frequency, filename
     )
+
+
     traffic_communication.start()    
 
     start_time = time.time()
