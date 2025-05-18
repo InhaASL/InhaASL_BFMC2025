@@ -74,10 +74,7 @@ class processTrafficCommunication(WorkerProcess):
     # ===================================== RUN ==========================================
     def run(self):
         """Apply the initializing methods and start the threads."""
-        # ROS 노드 초기화 확인 -- > 통신을 위해서 
-        if not rospy.core.is_initialized():
-            rospy.init_node("traffic_communication", anonymous=True)
-        
+        # ROS 노드 초기화는 RosBridge에서만 수행하도록 수정
         super(processTrafficCommunication, self).run()
 
     # ===================================== INIT TH ======================================

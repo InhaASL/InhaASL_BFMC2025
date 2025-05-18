@@ -24,6 +24,7 @@ from src.utils.messages.allMessages import (
 from src.utils.messages.messageHandlerSubscriber import messageHandlerSubscriber
 from std_msgs.msg import String
 import time
+import json
 
 class threadRosBridgeRead(ThreadWithStop):
     """This thread read data from SerialHandler and publish them to ROS topic .
@@ -43,11 +44,11 @@ class threadRosBridgeRead(ThreadWithStop):
         self.logging = logging
         self.debugging = debugging
 
-        # 큐 사이즈 작아서 데이터 손실될 수도 있음. 큐 사이즈 체크 필요함 (오버플로우)
-        self.imu_pub = rospy.Publisher('/imu', Imu, queue_size= 3)
-        self.speed_pub = rospy.Publisher('/current_speed', AckermannDriveStamped, queue_size= 3)
+        # 큐 사이즈 작아서 데이터 손실될 수도 있음. 큐 사이즈 체크 필요함 (오버플로우) ex)예상 지연 허용: 0.2초 정도 → 30 × 0.2 = 6개
+        self.imu_pub = rospy.Publisher('/imu', Imu, queue_size= 5)
+        self.speed_pub = rospy.Publisher('/current_speed', AckermannDriveStamped, queue_size= 5)
         self.subscribe()
-        self.rate = rospy.Rate(60)
+        self.rate = rospy.Rate(30) # 60--> 30Hz  변경했음 ,부담되는지 리소스 사용 확인 필요
 
         self.drive_msg = AckermannDriveStamped()
         self.current_speed = 0
@@ -58,14 +59,29 @@ class threadRosBridgeRead(ThreadWithStop):
 
         self.traffic_pub = rospy.Publisher('/traffic_data', String, queue_size=10) # 트래픽 데이터 토픽 발행
 
+        #semaphore & car data 토픽 발행
+        self.semaphores_pub = rospy.Publisher('/semaphores_data', String, queue_size=10)
+        self.cars_pub = rospy.Publisher('/cars_data', String, queue_size=10)
+
         super(threadRosBridgeRead, self).__init__()
 
     def run(self):
         try:
             while self._running and not rospy.is_shutdown():
+                start_time = time.time()
+                
                 try:
-                    # 데이터 처리 시간 측정
-                    start_time = time.time()
+                    # 토픽 구독자 수 확인 추가
+                    if not self.semaphores_pub.get_num_connections():
+                        self.logging.warning("Semaphores 토픽 구독자 없음")
+                    if not self.cars_pub.get_num_connections():
+                        self.logging.warning("Cars 토픽 구독자 없음")
+                    if not self.traffic_pub.get_num_connections():
+                        self.logging.warning("Traffic 토픽 구독자 없음")
+                    if not self.imu_pub.get_num_connections():
+                        self.logging.warning("IMU 토픽 구독자 없음")
+                    if not self.speed_pub.get_num_connections():
+                        self.logging.warning("Speed 토픽 구독자 없음")
                     
                     #imu receiver
                     imuData = self.imuDataSubscriber.receive()
@@ -130,7 +146,24 @@ class threadRosBridgeRead(ThreadWithStop):
                     '''semaphores(traffic) receiver'''
                     semaphoresData = self.semaphoresSubscriber.receive()
                     if semaphoresData is not None:
-                        print(f"semaphoresData:{semaphoresData}")
+                        # 데이터 검증
+                        if self.validate_semaphores_data(semaphoresData):
+                            # ROS 메시지로 변환
+                            semaphores_msg = String()
+                            semaphores_msg.data = json.dumps(semaphoresData)
+                            self.semaphores_pub.publish(semaphores_msg)
+                            
+                            if self.debugging:
+                                self.logging.info(f"Published semaphores data: {semaphoresData}")
+                    
+                    # Cars 데이터 처리 (semaphoresData에 car 정보도 포함되어 있음)
+                    if semaphoresData is not None and semaphoresData.get("device") == "car":
+                        cars_msg = String()
+                        cars_msg.data = json.dumps(semaphoresData)
+                        self.cars_pub.publish(cars_msg)
+                        
+                        if self.debugging:
+                            self.logging.info(f"Published cars data: {semaphoresData}")
 
                     # TrafficCommunication 데이터 처리 추가
                     traffic_data = self.trafficSubscriber.receive()
@@ -140,17 +173,18 @@ class threadRosBridgeRead(ThreadWithStop):
                         traffic_msg.data = str(traffic_data)
                         self.traffic_pub.publish(traffic_msg)
 
-                    # 처리 시간이 너무 길면 경고
-                    if time.time() - start_time > 0.1:  # 100ms
-                        self.logging.warning("Data processing took too long") # 데이터 처리 시간이 너무 길면 경고
+                    # 처리 시간 모니터링
+                    if time.time() - start_time > 0.1:
+                        self.logging.warning("데이터 처리 지연 발생")
                     
-                    self.rate.sleep()
                 except Exception as e:
-                    self.logging.error(f"Error processing data: {str(e)}")
-                    continue  # 다음 반복으로 진행
+                    self.logging.error(f"데이터 처리 중 오류: {str(e)}")
+                    continue
+                
+                self.rate.sleep()
         except Exception as e:
-            self.logging.error(f"Fatal error in run loop: {str(e)}")
-            self.stop()  # 스레드 정상 종료
+            self.logging.error(f"실행 중 치명적 오류: {str(e)}")
+            self.stop()
             
 
             
@@ -175,5 +209,19 @@ class threadRosBridgeRead(ThreadWithStop):
         if not isinstance(data, dict):
             return False
         required_fields = ['devicePos', 'deviceRot', 'deviceSpeed']
+        return all(field in data for field in required_fields)
+
+    def validate_semaphores_data(self, data):
+        """신호등 및 차량 데이터 검증"""
+        if not isinstance(data, dict):
+            return False
+        
+        if data.get("device") == "semaphore":
+            required_fields = ["id", "state", "x", "y"]
+        elif data.get("device") == "car":
+            required_fields = ["id", "x", "y"]
+        else:
+            return False
+        
         return all(field in data for field in required_fields)
 

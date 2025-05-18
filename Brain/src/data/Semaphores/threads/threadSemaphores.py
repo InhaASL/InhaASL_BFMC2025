@@ -47,9 +47,13 @@ class threadSemaphores(ThreadWithStop):
         self.queueList = queueList
         self.logger = logger
         self.debugging = debugging
-        self.udp_factory = udpListener(self.queueList, self.logger, self.debugging)
-        self.reactor = reactor
-        self.reactor.listenUDP(self.listenPort, self.udp_factory)
+        try: # 에러처리 추가 
+            self.udp_factory = udpListener(self.queueList, self.logger, self.debugging)
+            self.reactor = reactor
+            self.reactor.listenUDP(self.listenPort, self.udp_factory)
+        except Exception as e:
+            self.logger.error(f"UDP 초기화 실패: {str(e)}")
+            raise
 
     # ======================================= RUN ==========================================
     def run(self):
