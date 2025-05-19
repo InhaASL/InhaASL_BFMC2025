@@ -21,6 +21,8 @@ from src.utils.messages.allMessages import (
     Location,
     TrafficData
 )
+
+
 from src.utils.messages.messageHandlerSubscriber import messageHandlerSubscriber
 from std_msgs.msg import String
 import time
@@ -57,11 +59,11 @@ class threadRosBridgeRead(ThreadWithStop):
         #self.cur_state_pub = rospy.Publisher('/car_cur_state', CarState, queue_size=10)
         #To do: add car state msg
 
-        self.traffic_pub = rospy.Publisher('/traffic_data', String, queue_size=10) # 트래픽 데이터 토픽 발행
-
+        self.traffic_pub = rospy.Publisher('/traffic_data', String, queue_size=5) # 트래픽 데이터 토픽 발행
         #semaphore & car data 토픽 발행
-        self.semaphores_pub = rospy.Publisher('/semaphores_data', String, queue_size=10)
-        self.cars_pub = rospy.Publisher('/cars_data', String, queue_size=10)
+        self.semaphores_pub = rospy.Publisher('/semaphores_data', String, queue_size=5)
+        self.cars_pub = rospy.Publisher('/cars_data', String, queue_size=5)
+
 
         super(threadRosBridgeRead, self).__init__()
 
@@ -96,24 +98,24 @@ class threadRosBridgeRead(ThreadWithStop):
 
                     quaternion = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
 
-                        imu_msg = Imu()
-                        imu_msg.header.stamp = rospy.Time.now()
-                        imu_msg.header.frame_id = 'imu_link' 
+                    imu_msg = Imu()
+                    imu_msg.header.stamp = rospy.Time.now()
+                    imu_msg.header.frame_id = 'imu_link' 
 
-                        imu_msg.orientation.x = quaternion[0]
-                        imu_msg.orientation.y = quaternion[1]
-                        imu_msg.orientation.z = quaternion[2]
-                        imu_msg.orientation.w = quaternion[3]
+                    imu_msg.orientation.x = quaternion[0]
+                    imu_msg.orientation.y = quaternion[1]
+                    imu_msg.orientation.z = quaternion[2]
+                    imu_msg.orientation.w = quaternion[3]
 
-                        imu_msg.linear_acceleration.x = accelx
-                        imu_msg.linear_acceleration.y = accely
-                        imu_msg.linear_acceleration.z = accelz
+                    imu_msg.linear_acceleration.x = accelx
+                    imu_msg.linear_acceleration.y = accely
+                    imu_msg.linear_acceleration.z = accelz
 
-                        imu_msg.angular_velocity.x = 0.0
-                        imu_msg.angular_velocity.y = 0.0
-                        imu_msg.angular_velocity.z = 0.0
-                        
-                        self.imu_pub.publish(imu_msg)
+                    imu_msg.angular_velocity.x = 0.0
+                    imu_msg.angular_velocity.y = 0.0
+                    imu_msg.angular_velocity.z = 0.0
+                    
+                    self.imu_pub.publish(imu_msg)
                     '''car_speed&steer receiver'''
                     cur_speedData = self.currentSpeedSubscriber.receive()
                     if cur_speedData is not None:
@@ -167,6 +169,7 @@ class threadRosBridgeRead(ThreadWithStop):
 
                     # TrafficCommunication 데이터 처리 추가
                     traffic_data = self.trafficSubscriber.receive()
+                    print(traffic_data)
                     if traffic_data is not None:
                         # 데이터 형식에 따라 적절한 ROS 메시지로 변환
                         traffic_msg = String()

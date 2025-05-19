@@ -78,24 +78,24 @@ queueList = {
 }
 logging = logging.getLogger()
 
-# ROS 노드 초기화
-rospy.init_node('main_node', anonymous=True)
-# ROS 퍼블리셔 생성
-pub = rospy.Publisher('your_topic_name', String, queue_size=10)
+# # ROS 노드 초기화
+# rospy.init_node('main_node', anonymous=True)
+# # ROS 퍼블리셔 생성
+# pub = rospy.Publisher('your_topic_name', String, queue_size=10)
 
-# 메시지 발행 함수
-def publish_message():
-    msg = String()
-    msg.data = "Hello from main.py!"
-    pub.publish(msg)
-    rospy.loginfo("Published: %s", msg.data)
+# # 메시지 발행 함수
+# def publish_message():
+#     msg = String()
+#     msg.data = "Hello from main.py!"
+#     pub.publish(msg)
+#     # rospy.loginfo("Published: %s", msg.data)  #디버깅용 
 
-# 지속적인 메시지 발행을 위한 함수
-def continuous_publish():
-    rate = rospy.Rate(10)  # 10Hz로 메시지 발행
-    while not rospy.is_shutdown():
-        publish_message()
-        rate.sleep()
+# # 지속적인 메시지 발행을 위한 함수
+# def continuous_publish():
+#     rate = rospy.Rate(10)  # 10Hz로 메시지 발행
+#     while not rospy.is_shutdown():
+#         publish_message()
+#         rate.sleep()
 
 Dashboard = False
 Camera = False
@@ -160,7 +160,7 @@ for process in allProcesses:
 time.sleep(10)
 
 # 지속적인 메시지 발행 시작
-continuous_publish()
+# continuous_publish()
 
 def verify_processes(process_list):
     """모든 프로세스의 is_alive() 상태를 확인하는 간단한 함수."""
@@ -205,37 +205,4 @@ except KeyboardInterrupt:
     """
 
     print(big_text)
-    '''
-# -------- 프로세스 종료 & 디버깅 로깅 --------
-    print("[메인] 모든 자식 프로세스 중지 시도 (역순)...\n")
-    for proc in reversed(allProcesses):
-        name = proc.__class__.__name__
-        pid = proc.pid
-        print(f"→ {name} (PID={pid}) 종료 시도")
-        proc.stop()
-        time.sleep(1)  # 잠시 대기 후 is_alive() 확인
-        
-        if proc.is_alive():
-            print(f"→ {name} (PID={pid}) 여전히 종료되지 않음!")
-        else:
-            print(f"→ {name} (PID={pid}) 정상적으로 종료됨")
-
-    # Gateway 프로세스도 멈춤
-    print(f"[메인] Gateway 프로세스 {processGateway.__class__.__name__} (PID={processGateway.pid}) 종료 시도")
-    processGateway.stop()
-    time.sleep(1)
-    if processGateway.is_alive():
-        print(f"→ Gateway (PID={processGateway.pid}) 여전히 종료되지 않음!")
-    else:
-        print("→ Gateway 정상적으로 종료됨")
-    '''
-
-    big_text = """
-    PPPP   RRRR   EEEEE  SSSS  SSSS       CCCC  TTTTT RRRR    L          ++      CCCC      !!! 
-    P   P  R   R  E     S     S          C        T   R   R   L          ++      C         !!! 
-    PPPP   RRRR   EEEE   SSS   SSS       C        T   RRRR    L      ++++++++++  C         !!! 
-    P      R R    E         S     S      C        T   R R     L          ++      C         !!! 
-    P      R  R   EEEEE  SSSS  SSSS       CCCC    T   R  R    LLLLL      ++      CCCC      !!!
-    """
-
-    print(big_text)
+    

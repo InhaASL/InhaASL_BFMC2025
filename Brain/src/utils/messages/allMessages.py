@@ -264,3 +264,9 @@ class ROSKlem(Enum):
     msgID = 3
     msgType = "str"
 ### It will have this format: {"WarningName":"name1", "WarningID": 1}
+
+class TrafficData(Enum):
+    Queue = "General"
+    Qwner = "threadTrafficCommunication"
+    msgID = 2
+    msgType = "dict"

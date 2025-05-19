@@ -9,7 +9,7 @@ import rospy
 import time
 from src.templates.workerprocess import WorkerProcess
 from src.hardware.serialhandler.threads.filehandler import FileHandler
-from src.hardware.rosBridge.threads.threadRosBridgeRead import threadRosBridgeRead
+from src.hardware.rosBridge.threads.threadRosBridgeRead import threadRosBridgeRead 
 from src.hardware.rosBridge.threads.threadRosBridgeWrite import threadRosBridgeWrite
 
 class processRosBridge(WorkerProcess):
@@ -58,18 +58,19 @@ class processRosBridge(WorkerProcess):
     def stop(self):
         """Function for stopping threads and the process."""
         try:
+            self.logging.info("ROS Bridge 프로세스 종료 시작...")
             # 먼저 스레드들을 정지
             for thread in self.threads:
                 if thread.is_alive():
                     thread.stop()
-                    thread.join(timeout=5.0)
+                    thread.join(timeout=2.0)
                     if thread.is_alive():
                         self.logging.error(f"Thread {thread.__class__.__name__} did not stop properly")
             
             # ROS 노드 정상 종료
             if rospy.core.is_initialized():
                 rospy.signal_shutdown('Process stopping')
-                rospy.spinOnce()
+                time.sleep(0.5)
                 
         except Exception as e:
             self.logging.error(f"Error stopping process: {str(e)}")
