@@ -31,10 +31,22 @@ class processRosBridge(WorkerProcess):
 
     def run(self):
         """Apply the initializing methods and start the threads."""
-        rospy.init_node("ROS_Bridge", anonymous=False, disable_signals=True) 
-        super(processRosBridge, self).run()
-
-
+        try:
+            if not rospy.core.is_initialized():
+                # ROS 마스터 연결 시도
+                try:
+                    rospy.init_node("ROS_Bridge", anonymous=True, disable_signals=True)
+                    # 초기화 확인
+                    if not rospy.core.is_initialized():
+                        raise RuntimeError("ROS 노드 초기화 실패")
+                    self.logging.info("ROS 노드가 성공적으로 초기화되었습니다.")
+                except Exception as e:
+                    self.logging.error(f"ROS 마스터 연결 실패: {str(e)}")
+                    raise
+            super(processRosBridge, self).run()
+        except Exception as e:
+            self.logging.error(f"ROS 노드 초기화 중 오류 발생: {str(e)}")
+            raise
 
     def _init_threads(self):
         """Create the rosBridge Publisher thread and add to the list of threads."""
@@ -42,5 +54,26 @@ class processRosBridge(WorkerProcess):
         self.threads.append(rosBridgeReadTh)
         rosBridgeWriteTh = threadRosBridgeWrite(self.queuesList, self.logging, self.debugging)
         self.threads.append(rosBridgeWriteTh)
+
+    def stop(self):
+        """Function for stopping threads and the process."""
+        try:
+            # 먼저 스레드들을 정지
+            for thread in self.threads:
+                if thread.is_alive():
+                    thread.stop()
+                    thread.join(timeout=5.0)
+                    if thread.is_alive():
+                        self.logging.error(f"Thread {thread.__class__.__name__} did not stop properly")
+            
+            # ROS 노드 정상 종료
+            if rospy.core.is_initialized():
+                rospy.signal_shutdown('Process stopping')
+                rospy.spinOnce()
+                
+        except Exception as e:
+            self.logging.error(f"Error stopping process: {str(e)}")
+        finally:
+            super(processRosBridge, self).stop()
 
 

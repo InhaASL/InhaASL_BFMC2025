@@ -49,17 +49,47 @@ class udpListener(protocol.DatagramProtocol):
         Args:
             datagram (dictionary): In this we store the data we get from servers.
         """
-        dat = datagram.decode("utf-8")
-        dat = json.loads(dat)
-
-        if dat["device"] == "semaphore":
-            tmp = {"id": dat["id"], "state": dat["state"], "x": dat["x"], "y": dat["y"]}
-
-        elif dat["device"] == "car":
-            tmp = {"id": dat["id"], "x": dat["x"], "y": dat["y"]}
-        if self.debugging:
-            self.logger.info(tmp)
-        self.semaphoresSender.send(tmp)
+        try:
+            dat = datagram.decode("utf-8")
+            dat = json.loads(dat)
+            
+            if "device" not in dat:
+                self.logger.error("device 필드 누락")
+                return
+            
+            # 데이터 검증 및 처리
+            if dat["device"] == "semaphore":
+                if not all(key in dat for key in ["id", "state", "x", "y"]):
+                    self.logger.error("신호등 데이터 필드 누락")
+                    return
+                tmp = {
+                    "device": "semaphore",
+                    "id": dat["id"],
+                    "state": dat["state"],
+                    "x": dat["x"],
+                    "y": dat["y"]
+                }
+            elif dat["device"] == "car":
+                if not all(key in dat for key in ["id", "x", "y"]):
+                    self.logger.error("차량 데이터 필드 누락")
+                    return
+                tmp = {
+                    "device": "car",
+                    "id": dat["id"],
+                    "x": dat["x"],
+                    "y": dat["y"]
+                }
+            else:
+                self.logger.error(f"알 수 없는 device 타입: {dat['device']}")
+                return
+            
+            if self.debugging:
+                self.logger.info(f"Received data: {tmp}")
+            self.semaphoresSender.send(tmp)
+        except json.JSONDecodeError:
+            self.logger.error("JSON 파싱 실패")
+        except Exception as e:
+            self.logger.error(f"데이터 처리 중 오류: {str(e)}")
 
     def stopListening(self):
         super().stopListening()

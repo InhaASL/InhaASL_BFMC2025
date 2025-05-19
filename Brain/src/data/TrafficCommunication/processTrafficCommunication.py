@@ -37,6 +37,8 @@ from src.templates.workerprocess import WorkerProcess
 from src.data.TrafficCommunication.threads.threadTrafficCommunicaiton import (
     threadTrafficCommunication,
 )
+
+import rospy
 class processTrafficCommunication(WorkerProcess):
     """This process receives the location of the car and sends it to the processGateway.
     
@@ -72,7 +74,7 @@ class processTrafficCommunication(WorkerProcess):
     # ===================================== RUN ==========================================
     def run(self):
         """Apply the initializing methods and start the threads."""
-
+        # ROS 노드 초기화는 RosBridge에서만 수행하도록 수정
         super(processTrafficCommunication, self).run()
 
     # ===================================== INIT TH ======================================
@@ -89,7 +91,7 @@ class processTrafficCommunication(WorkerProcess):
 #             ++    THIS WILL RUN ONLY IF YOU RUN THE CODE FROM HERE  ++
 #                  in terminal:    python3 processTrafficCommunication.py
 
-if __name__ == "__main__":
+if __name__ == "__main__": # 이 파일을 직접 실행할때만 작동, 아니라면 main.py 클래스만 불러와짐 
     from multiprocessing import Queue
     import time
     import logging

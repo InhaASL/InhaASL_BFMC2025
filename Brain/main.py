@@ -55,6 +55,7 @@ logging.basicConfig(level=logging.INFO)
 # ===================================== PROCESS IMPORTS ==================================
 
 import rospy
+from std_msgs.msg import String  # ROS 메시지 타입 추가
 from src.gateway.processGateway import processGateway
 from src.dashboard.processDashboard import processDashboard
 # from src.hardware.camera.processCamera import processCamera
@@ -65,6 +66,7 @@ from src.utils.ipManager.IpReplacement import IPManager
 # ------ New component imports starts here ------#
 from src.hardware.rosBridge.processRosBridge import processRosBridge
 # ------ New component imports ends here ------#
+
 # ======================================== SETTING UP ====================================
 allProcesses = list()
 
@@ -76,6 +78,24 @@ queueList = {
 }
 logging = logging.getLogger()
 
+# ROS 노드 초기화
+rospy.init_node('main_node', anonymous=True)
+# ROS 퍼블리셔 생성
+pub = rospy.Publisher('your_topic_name', String, queue_size=10)
+
+# 메시지 발행 함수
+def publish_message():
+    msg = String()
+    msg.data = "Hello from main.py!"
+    pub.publish(msg)
+    rospy.loginfo("Published: %s", msg.data)
+
+# 지속적인 메시지 발행을 위한 함수
+def continuous_publish():
+    rate = rospy.Rate(10)  # 10Hz로 메시지 발행
+    while not rospy.is_shutdown():
+        publish_message()
+        rate.sleep()
 
 Dashboard = False
 Camera = False
@@ -133,13 +153,14 @@ if RosBridge:
 
 print(allProcesses)
 # ===================================== START PROCESSES ==================================
-# rospy.init_node("ROS_Bridge", anonymous=False, disable_signals=True) # disable_signals=True 제거 
-
 for process in allProcesses:
     process.daemon = True
     process.start()
 
 time.sleep(10)
+
+# 지속적인 메시지 발행 시작
+continuous_publish()
 
 def verify_processes(process_list):
     """모든 프로세스의 is_alive() 상태를 확인하는 간단한 함수."""

@@ -1,0 +1,6 @@
+-cmh 정리파일입니다
+
+processRosBridge는 두 개의 주요 스레드를 관리합니다:
+threadRosBridgeRead: BFMC → ROS 방향 통신
+threadRosBridgeWrite: ROS → BFMC 방향 통신
+
