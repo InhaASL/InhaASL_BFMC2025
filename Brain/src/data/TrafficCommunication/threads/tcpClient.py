@@ -28,9 +28,14 @@
 
 import json
 import time
+import logging
 from src.utils.messages.allMessages import Location, TrafficData
 from src.utils.messages.messageHandlerSender import messageHandlerSender
 from twisted.internet import protocol
+
+# 로깅 설정
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger('TrafficClient')
 
 # The server itself. Creates a new Protocol for each new connection and has the info for all of them.
 class tcpClient(protocol.ClientFactory):
@@ -44,25 +49,19 @@ class tcpClient(protocol.ClientFactory):
         self.queue = queue
         self.sendLocation = messageHandlerSender(self.queue, Location)
         self.sendTrafficData = messageHandlerSender(self.queue, TrafficData)
+        logger.info("TCP Client initialized")
 
     def clientConnectionLost(self, connector, reason):
-        print(
-            "Connection lost with server ",
-            self.connectiondata,
-        )
+        logger.warning(f"Connection lost with server {self.connectiondata}")
         try:
             self.connectiondata = None
             self.connection = None
             self.connectionBrokenCllbck()
-        except:
-            pass
+        except Exception as e:
+            logger.error(f"Error in connection lost handler: {str(e)}")
 
     def clientConnectionFailed(self, connector, reason):
-        print(
-            "Connection failed. Retrying in",
-            self.retry_delay,
-            "seconds... Possible server down or incorrect IP:port match",
-        )
+        logger.warning(f"Connection failed. Retrying in {self.retry_delay} seconds...")
         time.sleep(self.retry_delay)
         connector.connect()
 
@@ -72,6 +71,7 @@ class tcpClient(protocol.ClientFactory):
         return conn
 
     def send_data_to_server(self, message):
+        logger.debug(f"Sending data to server: {message}")
         self.connection.send_data(message)
 
 
@@ -82,29 +82,37 @@ class SingleConnection(protocol.Protocol):
         self.factory.connectiondata = peer.host + ":" + str(peer.port)
         self.factory.connection = self
         self.subscribeToLocaitonData(self.factory.locsysID, self.factory.locsysFrequency)
-        print("Connection with server established : ", self.factory.connectiondata)
+        logger.info(f"Connection with server established: {self.factory.connectiondata}")
 
     def dataReceived(self, data):
         try:
             dat = data.decode()
+            logger.debug(f"Raw data received: {dat}")
+            
             tmp_data = dat.replace("}{","}}{{")
             if tmp_data != dat:
                 tmp_dat = tmp_data.split("}{")
                 dat = tmp_dat[-1]
+            
             da = json.loads(dat)
+            logger.debug(f"Parsed data: {da}")
 
             if da["type"] == "location":
                 da["id"] = self.factory.locsysID
+                logger.info(f"Sending location data: {da}")
                 self.factory.sendLocation.send(da)
             elif da["type"] == "traffic":
+                logger.info(f"Sending traffic data: {da}")
                 self.factory.sendTrafficData.send(da)
             else:
-                print("Received unknown message type:", da["type"])
+                logger.warning(f"Received unknown message type: {da['type']}")
         except Exception as e:
-            print("Error processing received data:", str(e))
+            logger.error(f"Error processing received data: {str(e)}")
+            logger.error(f"Problematic data: {data}")
 
     def send_data(self, message):
         msg = json.dumps(message)
+        logger.debug(f"Sending message: {msg}")
         self.transport.write(msg.encode())
     
     def subscribeToLocaitonData(self, id, frequency):
@@ -115,6 +123,7 @@ class SingleConnection(protocol.Protocol):
             "locID": id,
             "freq": frequency,
         }
+        logger.info(f"Subscribing to location data: {msg}")
         self.send_data(msg)
     
     def unSubscribeToLocaitonData(self, id, frequency):
@@ -123,4 +132,5 @@ class SingleConnection(protocol.Protocol):
             "reqORinfo": "info",
             "type": "locIDubsub",
         }
+        logger.info("Unsubscribing from location data")
         self.send_data(msg)

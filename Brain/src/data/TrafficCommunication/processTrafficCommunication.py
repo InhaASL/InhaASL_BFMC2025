@@ -75,6 +75,9 @@ class processTrafficCommunication(WorkerProcess):
     def run(self):
         """Apply the initializing methods and start the threads."""
         # ROS 노드 초기화는 RosBridge에서만 수행하도록 수정
+        try:
+            print(queueList["General"].get(timeout=1))
+        except:pass
         super(processTrafficCommunication, self).run()
 
     # ===================================== INIT TH ======================================

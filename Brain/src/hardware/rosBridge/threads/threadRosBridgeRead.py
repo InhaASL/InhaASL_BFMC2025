@@ -123,18 +123,19 @@ class threadRosBridgeRead(ThreadWithStop):
                     traffic_data = self.trafficSubscriber.receive()
                     if traffic_data is not None:
                         try:
-                            self.logging.info(f"Received traffic data: {traffic_data}")
+                            self.logging.info(f"[Traffic] Received data from queue: {traffic_data}")
                             # 데이터 검증
                             if self.validate_traffic_data(traffic_data):
                                 # JSON 형식으로 변환
                                 traffic_msg = String()
                                 traffic_msg.data = json.dumps(traffic_data)
                                 self.traffic_pub.publish(traffic_msg)
-                                self.logging.info("Published traffic data to ROS topic")
+                                self.logging.info(f"[Traffic] Published to ROS topic: {traffic_msg.data}")
                             else:
-                                self.logging.warning(f"Invalid traffic data format: {traffic_data}")
+                                self.logging.warning(f"[Traffic] Invalid data format: {traffic_data}")
                         except Exception as e:
-                            self.logging.error(f"Traffic data processing error: {str(e)}")
+                            self.logging.error(f"[Traffic] Processing error: {str(e)}")
+                            self.logging.error(f"[Traffic] Problematic data: {traffic_data}")
 
                     # Semaphores 데이터 처리
                     semaphoresData = self.semaphoresSubscriber.receive()
