@@ -66,6 +66,8 @@ from src.utils.ipManager.IpReplacement import IPManager
 # ------ New component imports starts here ------#
 from src.hardware.rosBridge.processRosBridge import processRosBridge
 # ------ New component imports ends here ------#
+# from src.utils.router.dummyRouter import DummyRouter  # gateway에서 대신해주고 있어서 필요없음
+
 
 # ======================================== SETTING UP ====================================
 allProcesses = list()
@@ -151,6 +153,10 @@ if RosBridge:
     processRosBridge = processRosBridge(queueList, logging, debugging = False)
     allProcesses.append(processRosBridge)
 # ------ New component runs ends here ------#
+
+# router = DummyRouter(queueList, logging)
+# allProcesses.append(router)
+
 
 print(allProcesses)
 # ===================================== START PROCESSES ==================================

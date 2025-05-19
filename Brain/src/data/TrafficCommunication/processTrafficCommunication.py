@@ -37,6 +37,9 @@ from src.templates.workerprocess import WorkerProcess
 from src.data.TrafficCommunication.threads.threadTrafficCommunicaiton import (
     threadTrafficCommunication,
 )
+from src.utils.messages.messageHandlerSender import messageHandlerSender
+from src.utils.messages.allMessages import TrafficData
+
 
 import rospy
 class processTrafficCommunication(WorkerProcess):
@@ -85,29 +88,33 @@ class processTrafficCommunication(WorkerProcess):
             # shared_memory에서 데이터를 가져오거나 다른 소스에서 데이터를 받아옵니다
             traffic_data = {
                 "type": "traffic",
-                # "x": self.shared_memory.get("devicePos")[0] if self.shared_memory.get("devicePos") else 0.0,
-                # "y": self.shared_memory.get("devicePos")[1] if self.shared_memory.get("devicePos") else 0.0,
-                "x": 1.2,
-                "y": 2.3,
+                "x": self.shared_memory.get("devicePos")[0] if self.shared_memory.get("devicePos") else 0.0,
+                "y": self.shared_memory.get("devicePos")[1] if self.shared_memory.get("devicePos") else 0.0,
+                # "x": 1.2, 
+                # "y": 2.3,
                 "z": 0.0,
                 "quality": 1
             }
+
+            sender = messageHandlerSender(self.queuesList, TrafficData)
+            sender.send(traffic_data) 
             
-            # TrafficData 메시지로 전송
-            self.queuesList["TrafficData"].put({
-                "Owner": "TrafficCommunication",
-                "msgID": "TrafficData",
-                "msgType": "dict",
-                "msgValue": traffic_data
-            })
+            # # TrafficData 메시지로 전송
+            # self.queuesList["TrafficData"].put({
+            #     "Owner": "TrafficCommunication",
+            #     "msgID": "TrafficData",
+            #     "msgType": "dict",
+            #     "msgValue": traffic_data
+            # })
             
             if self.debugging:
                 self.logging.info(f"Traffic data sent to queue: {traffic_data}")
-                
+
+
         except Exception as e:
             if self.debugging:
                 self.logging.error(f"Error sending traffic data: {str(e)}")
-            
+        
         super(processTrafficCommunication, self).run()
 
     # ===================================== INIT TH ======================================

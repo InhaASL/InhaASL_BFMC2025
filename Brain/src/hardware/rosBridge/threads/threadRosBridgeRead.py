@@ -26,6 +26,7 @@ from src.utils.messages.allMessages import (
 from src.utils.messages.messageHandlerSubscriber import messageHandlerSubscriber
 from std_msgs.msg import String
 import time
+from src.utils.messages.allMessages import TrafficData
 
 class threadRosBridgeRead(ThreadWithStop):
     """This thread read data from SerialHandler and publish them to ROS topic .
@@ -120,9 +121,10 @@ class threadRosBridgeRead(ThreadWithStop):
                         self.logging.info("Published speed data")
 
                     # Traffic 데이터 처리
-                    traffic_data = self.trafficSubscriber.receive()
+                    traffic_data = self.trafficSubscriber.receive() # traffic 데이터 수신 (queuelist에서 구독 )
                     if traffic_data is not None:
                         try:
+                            
                             self.logging.info(f"[Traffic] Received data from queue: {traffic_data}")
                             # 데이터 검증
                             if self.validate_traffic_data(traffic_data):
@@ -175,6 +177,7 @@ class threadRosBridgeRead(ThreadWithStop):
         self.semaphoresSubscriber = messageHandlerSubscriber(self.queuesList, Semaphores, "lastOnly", True)
         self.locationSubscriber = messageHandlerSubscriber(self.queuesList, Location, "lastOnly", True)
         self.trafficSubscriber = messageHandlerSubscriber(self.queuesList, TrafficData, "lastOnly", True)
+
 
     def validate_traffic_data(self, data):
         """트래픽 데이터 검증"""
