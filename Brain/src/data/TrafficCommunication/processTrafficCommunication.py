@@ -75,9 +75,37 @@ class processTrafficCommunication(WorkerProcess):
     def run(self):
         """Apply the initializing methods and start the threads."""
         # ROS 노드 초기화는 RosBridge에서만 수행하도록 수정
+        
+        # main.py 실행했을때 , 데이터 들어오는 거 확인 완료. 
+        # try:
+        #     print(queueList["General"].get(timeout=1))
+        # except:pass
         try:
-            print(queueList["General"].get(timeout=1))
-        except:pass
+            # 실제 데이터를 받아오는 부분
+            # shared_memory에서 데이터를 가져오거나 다른 소스에서 데이터를 받아옵니다
+            traffic_data = {
+                "type": "traffic",
+                "x": self.shared_memory.get("devicePos")[0] if self.shared_memory.get("devicePos") else 0.0,
+                "y": self.shared_memory.get("devicePos")[1] if self.shared_memory.get("devicePos") else 0.0,
+                "z": 0.0,
+                "quality": 1
+            }
+            
+            # TrafficData 메시지로 전송
+            self.queuesList["General"].put({
+                "Owner": "TrafficCommunication",
+                "msgID": "TrafficData",
+                "msgType": "dict",
+                "msgValue": traffic_data
+            })
+            
+            if self.debugging:
+                self.logging.info(f"Traffic data sent to queue: {traffic_data}")
+                
+        except Exception as e:
+            if self.debugging:
+                self.logging.error(f"Error sending traffic data: {str(e)}")
+            
         super(processTrafficCommunication, self).run()
 
     # ===================================== INIT TH ======================================
