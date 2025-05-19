@@ -28,7 +28,7 @@
 
 import json
 import time
-from src.utils.messages.allMessages import Location
+from src.utils.messages.allMessages import Location, TrafficData
 from src.utils.messages.messageHandlerSender import messageHandlerSender
 from twisted.internet import protocol
 
@@ -43,6 +43,7 @@ class tcpClient(protocol.ClientFactory):
         self.locsysFrequency = locsysFrequency
         self.queue = queue
         self.sendLocation = messageHandlerSender(self.queue, Location)
+        self.sendTrafficData = messageHandlerSender(self.queue, TrafficData)
 
     def clientConnectionLost(self, connector, reason):
         print(
@@ -84,22 +85,24 @@ class SingleConnection(protocol.Protocol):
         print("Connection with server established : ", self.factory.connectiondata)
 
     def dataReceived(self, data):
-        dat = data.decode()
-        tmp_data = dat.replace("}{","}}{{")
-        if tmp_data != dat:
-            tmp_dat = tmp_data.split("}{")
-            dat = tmp_dat[-1]
-        da = json.loads(dat)
+        try:
+            dat = data.decode()
+            tmp_data = dat.replace("}{","}}{{")
+            if tmp_data != dat:
+                tmp_dat = tmp_data.split("}{")
+                dat = tmp_dat[-1]
+            da = json.loads(dat)
 
-        if da["type"] == "location":
-            da["id"] = self.factory.locsysID
-            # self.sendLocation.send_message(da) # 문제발생
-            self.factory.sendLocation.send(da)
-        else:
-            print(
-                "got message from trafficcommunication server: ",
-                self.factory.connectiondata,
-            )
+            if da["type"] == "location":
+                da["id"] = self.factory.locsysID
+                self.factory.sendLocation.send(da)
+            elif da["type"] == "traffic":
+                self.factory.sendTrafficData.send(da)
+            else:
+                print("Received unknown message type:", da["type"])
+        except Exception as e:
+            print("Error processing received data:", str(e))
+
     def send_data(self, message):
         msg = json.dumps(message)
         self.transport.write(msg.encode())

@@ -123,12 +123,16 @@ class threadRosBridgeRead(ThreadWithStop):
                     traffic_data = self.trafficSubscriber.receive()
                     if traffic_data is not None:
                         try:
+                            self.logging.info(f"Received traffic data: {traffic_data}")
+                            # 데이터 검증
                             if self.validate_traffic_data(traffic_data):
+                                # JSON 형식으로 변환
                                 traffic_msg = String()
                                 traffic_msg.data = json.dumps(traffic_data)
                                 self.traffic_pub.publish(traffic_msg)
-                                if self.debugging:
-                                    self.logging.info("Published traffic data")
+                                self.logging.info("Published traffic data to ROS topic")
+                            else:
+                                self.logging.warning(f"Invalid traffic data format: {traffic_data}")
                         except Exception as e:
                             self.logging.error(f"Traffic data processing error: {str(e)}")
 
@@ -177,12 +181,18 @@ class threadRosBridgeRead(ThreadWithStop):
             self.logging.warning("Traffic data is not a dictionary")
             return False
         
-        required_fields = ['x', 'y', 'z', 'quality']
+        # 서버에서 받은 데이터 형식에 맞게 수정
+        required_fields = ['type', 'x', 'y', 'z', 'quality']
         if not all(field in data for field in required_fields):
             self.logging.warning(f"Missing required fields in traffic data. Required: {required_fields}, Got: {list(data.keys())}")
             return False
             
         try:
+            # 데이터 타입 검증
+            if data['type'] != 'traffic':
+                self.logging.warning(f"Invalid message type: {data['type']}")
+                return False
+                
             float(data['x'])
             float(data['y'])
             float(data['z'])
