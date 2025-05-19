@@ -7,6 +7,7 @@ if __name__ == "__main__":
 
 import rospy
 import time
+import signal
 from src.templates.workerprocess import WorkerProcess
 from src.hardware.serialhandler.threads.filehandler import FileHandler
 from src.hardware.rosBridge.threads.threadRosBridgeRead import threadRosBridgeRead 
@@ -27,6 +28,7 @@ class processRosBridge(WorkerProcess):
         self.queuesList = queueList
         self.debugging = debugging
         self.logging = logging
+        self._shutdown = False
         super(processRosBridge, self).__init__(self.queuesList)
 
     def run(self):
@@ -40,6 +42,11 @@ class processRosBridge(WorkerProcess):
                     if not rospy.core.is_initialized():
                         raise RuntimeError("ROS 노드 초기화 실패")
                     self.logging.info("ROS 노드가 성공적으로 초기화되었습니다.")
+                    
+                    # 시그널 핸들러 등록
+                    signal.signal(signal.SIGINT, self._signal_handler)
+                    signal.signal(signal.SIGTERM, self._signal_handler)
+                    
                 except Exception as e:
                     self.logging.error(f"ROS 마스터 연결 실패: {str(e)}")
                     raise
@@ -47,6 +54,12 @@ class processRosBridge(WorkerProcess):
         except Exception as e:
             self.logging.error(f"ROS 노드 초기화 중 오류 발생: {str(e)}")
             raise
+
+    def _signal_handler(self, signum, frame):
+        """시그널 핸들러"""
+        self.logging.info(f"시그널 수신: {signum}")
+        self._shutdown = True
+        self.stop()
 
     def _init_threads(self):
         """Create the rosBridge Publisher thread and add to the list of threads."""
@@ -56,25 +69,41 @@ class processRosBridge(WorkerProcess):
         self.threads.append(rosBridgeWriteTh)
 
     def stop(self):
-        """Function for stopping threads and the process."""
+        if self._shutdown:
+            return
+            
         try:
+            self._shutdown = True
             self.logging.info("ROS Bridge 프로세스 종료 시작...")
-            # 먼저 스레드들을 정지
+            
+            # 스레드 종료
             for thread in self.threads:
                 if thread.is_alive():
+                    self.logging.info(f"{thread.__class__.__name__} 스레드 종료 시도...")
                     thread.stop()
                     thread.join(timeout=2.0)
+                    
                     if thread.is_alive():
-                        self.logging.error(f"Thread {thread.__class__.__name__} did not stop properly")
+                        self.logging.warning(f"{thread.__class__.__name__} 스레드가 정상적으로 종료되지 않음. 강제 종료 시도...")
+                        thread.join(timeout=1.0)
+                        if thread.is_alive():
+                            self.logging.error(f"{thread.__class__.__name__} 스레드 강제 종료 실패")
             
-            # ROS 노드 정상 종료
+            # ROS 노드 종료
             if rospy.core.is_initialized():
+                self.logging.info("ROS 노드 종료 중...")
                 rospy.signal_shutdown('Process stopping')
-                time.sleep(0.5)
+                time.sleep(1.0)  # ROS 노드가 완전히 종료될 때까지 대기
                 
+                if rospy.core.is_initialized():
+                    self.logging.warning("ROS 노드가 정상적으로 종료되지 않음")
+                else:
+                    self.logging.info("ROS 노드가 성공적으로 종료됨")
+            
         except Exception as e:
-            self.logging.error(f"Error stopping process: {str(e)}")
+            self.logging.error(f"프로세스 종료 중 오류 발생: {str(e)}")
         finally:
             super(processRosBridge, self).stop()
+            self.logging.info("ROS Bridge 프로세스 종료 완료")
 
 
