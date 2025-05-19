@@ -75,6 +75,7 @@ queueList = {
     "Warning": Queue(),
     "General": Queue(),
     "Config": Queue(),
+    "TrafficData": Queue(),  # TrafficData 큐 추가
 }
 logging = logging.getLogger()
 
