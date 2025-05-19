@@ -268,5 +268,5 @@ class ROSKlem(Enum):
 class TrafficData(Enum):
     Queue = "General"
     Owner = "threadTrafficCommunication"
-    msgID = 2
+    msgID = 1
     msgType = "dict"
