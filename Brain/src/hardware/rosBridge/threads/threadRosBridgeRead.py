@@ -129,6 +129,7 @@ class threadRosBridgeRead(ThreadWithStop):
 
                     # Traffic 데이터 처리
                     traffic_data = self.trafficSubscriber.receive()
+                    print(f"traffic data : {traffic_data}")
                     if self.debugging:
                         self.logging.info(f"[Traffic] Received data from subscriber: {traffic_data}")
                     

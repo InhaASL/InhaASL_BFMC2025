@@ -105,16 +105,38 @@ class SingleConnection(protocol.Protocol):
                 # location 데이터를 traffic 데이터로 변환
                 traffic_data = {
                     "type": "traffic",
-                    "x": da.get("x", 0.0),
-                    "y": da.get("y", 0.0),
-                    "z": da.get("z", 0.0),
-                    "quality": da.get("quality", 1)
+                    "x": float(da.get("x", 0.0)),
+                    "y": float(da.get("y", 0.0)),
+                    "z": float(da.get("z", 0.0)),
+                    "quality": int(da.get("quality", 1))
                 }
                 logger.info(f"Converting location data to traffic data: {traffic_data}")
-                self.factory.sendTrafficData.send(traffic_data)
+                try:
+                    # TrafficData 큐에 직접 전송
+                    self.factory.queue["TrafficData"].put({
+                        "Owner": "TrafficCommunication",
+                        "msgID": "TrafficData",
+                        "msgType": "dict",
+                        "msgValue": traffic_data
+                    })
+                    logger.info("Traffic data successfully sent to TrafficData queue")
+                except Exception as e:
+                    logger.error(f"Error sending traffic data: {str(e)}")
+                    logger.error("Stack trace:", exc_info=True)
             elif da["type"] == "traffic":
                 logger.info(f"Sending traffic data: {da}")
-                self.factory.sendTrafficData.send(da)
+                try:
+                    # TrafficData 큐에 직접 전송
+                    self.factory.queue["TrafficData"].put({
+                        "Owner": "TrafficCommunication",
+                        "msgID": "TrafficData",
+                        "msgType": "dict",
+                        "msgValue": da
+                    })
+                    logger.info("Traffic data successfully sent to TrafficData queue")
+                except Exception as e:
+                    logger.error(f"Error sending traffic data: {str(e)}")
+                    logger.error("Stack trace:", exc_info=True)
             else:
                 logger.warning(f"Received unknown message type: {da['type']}")
         except Exception as e:
