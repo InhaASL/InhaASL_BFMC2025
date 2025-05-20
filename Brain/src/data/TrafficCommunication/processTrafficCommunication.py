@@ -86,10 +86,19 @@ class processTrafficCommunication(WorkerProcess):
 
             # 실제 데이터를 받아오는 부분
             device_pos = self.shared_memory.get()
+            if self.debugging:
+                self.logging.info(f"Received device position: {device_pos}")
+
+            # device_pos가 리스트인 경우 처리
+            if isinstance(device_pos, list) and len(device_pos) >= 2:
+                x, y = device_pos[0], device_pos[1]
+            else:
+                x, y = 0.0, 0.0
+
             traffic_data = {
                 "type": "traffic",
-                "x": device_pos.get("devicePos", [0.0, 0.0])[0],
-                "y": device_pos.get("devicePos", [0.0, 0.0])[1],
+                "x": x,
+                "y": y,
                 "z": 0.0,
                 "quality": 1
             }
