@@ -106,7 +106,7 @@ class SingleConnection(protocol.Protocol):
                     "z": float(da.get("z", 0.0)),
                     "quality": int(da.get("quality", 1))
                 }
-                logger.info(f"Converting location data to traffic data: {traffic_data}")
+                #logger.info(f"Converting location data to traffic data: {traffic_data}") #확인완료. location으로 들어옴
                 try:
                     # TrafficData 큐에 직접 전송
                     message = {
