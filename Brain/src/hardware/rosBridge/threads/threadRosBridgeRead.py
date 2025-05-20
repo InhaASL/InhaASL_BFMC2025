@@ -110,7 +110,7 @@ class threadRosBridgeRead(ThreadWithStop):
                                     
                                     # ROS 토픽 발행
                                     self.traffic_pub.publish(traffic_msg)
-                                    rospy.loginfo(f"Published traffic data: {traffic_msg.data}") #이게 한번 떴는데??
+                                    rospy.loginfo(f"Published traffic data: {traffic_msg.data}") #이게 한번만 publish되고 잇음
                                     
                                     if self.debugging:
                                         self.logging.info(f"[Traffic] Published to ROS topic /traffic_data: {traffic_msg.data}")
@@ -186,12 +186,12 @@ class threadRosBridgeRead(ThreadWithStop):
                         except Exception as e:
                             self.logging.error(f"Semaphores data processing error: {str(e)}")
 
+                    self.rate.sleep()  # Semaphores 데이터 처리 후 sleep
+
                 except Exception as e:
                     self.logging.error(f"Data processing error: {str(e)}")
                     self.logging.error("Stack trace:", exc_info=True)
                     continue
-
-                self.rate.sleep()
 
         except Exception as e:
             self.logging.error(f"Thread execution error: {str(e)}")
