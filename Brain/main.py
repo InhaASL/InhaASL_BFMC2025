@@ -210,6 +210,24 @@ except KeyboardInterrupt:
     P      L        E      AAAAA      S E           W W W W  AAAAA  I    T  
     P      LLLLLL   EEEEE  A   A  SSSS  EEEEE        W   W   A   A III   T  
     """
-
     print(big_text)
+    
+    # 모든 프로세스 종료
+    for process in allProcesses:
+        if process.is_alive():
+            process.stop()
+            process.join(timeout=2.0)
+            if process.is_alive():
+                process.terminate()
+                process.join(timeout=1.0)
+    
+    # gateway 프로세스 종료
+    if processGateway.is_alive():
+        processGateway.stop()
+        processGateway.join(timeout=2.0)
+        if processGateway.is_alive():
+            processGateway.terminate()
+            processGateway.join(timeout=1.0)
+    
+    print("모든 프로세스가 종료되었습니다.")
     

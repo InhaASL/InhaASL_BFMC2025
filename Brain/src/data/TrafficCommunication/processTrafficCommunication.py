@@ -77,28 +77,25 @@ class processTrafficCommunication(WorkerProcess):
     # ===================================== RUN ==========================================
     def run(self):
         """Apply the initializing methods and start the threads."""
-        # ROS 노드 초기화는 RosBridge에서만 수행하도록 수정
-        
-        # main.py 실행했을때 , 데이터 들어오는 거 확인 완료. 
-        # try:
-        #     print(queueList["General"].get(timeout=1))
-        # except:pass
         try:
+            if self.debugging:
+                self.logging.info("Traffic Communication 프로세스 시작")
+                self.logging.info(f"Device ID: {self.deviceID}")
+                self.logging.info(f"Frequency: {self.frequency}")
+                self.logging.info(f"Key file: {self.filename}")
+
             # 실제 데이터를 받아오는 부분
-            # shared_memory에서 데이터를 가져오거나 다른 소스에서 데이터를 받아옵니다
             traffic_data = {
                 "type": "traffic",
                 "x": self.shared_memory.get("devicePos")[0] if self.shared_memory.get("devicePos") else 0.0,
                 "y": self.shared_memory.get("devicePos")[1] if self.shared_memory.get("devicePos") else 0.0,
-                # "x": 1.2, 
-                # "y": 2.3,
                 "z": 0.0,
                 "quality": 1
             }
 
-            sender = messageHandlerSender(self.queuesList, TrafficData)
-            sender.send(traffic_data) 
-            
+            if self.debugging:
+                self.logging.info(f"Preparing to send traffic data: {traffic_data}")
+
             # TrafficData 메시지로 전송
             self.queuesList["TrafficData"].put({
                 "Owner": "TrafficCommunication",
@@ -106,14 +103,21 @@ class processTrafficCommunication(WorkerProcess):
                 "msgType": "dict",
                 "msgValue": traffic_data
             })
-            
-            if self.debugging:
-                self.logging.info(f"Traffic data sent to queue: {traffic_data}")
 
+            if self.debugging:
+                self.logging.info("Traffic data sent to TrafficData queue")
+
+            # General 큐에도 전송 (기존 방식 유지)
+            sender = messageHandlerSender(self.queuesList, TrafficData)
+            sender.send(traffic_data)
+
+            if self.debugging:
+                self.logging.info("Traffic data sent via messageHandlerSender")
 
         except Exception as e:
             if self.debugging:
                 self.logging.error(f"Error sending traffic data: {str(e)}")
+                self.logging.error(f"Stack trace:", exc_info=True)
         
         super(processTrafficCommunication, self).run()
 

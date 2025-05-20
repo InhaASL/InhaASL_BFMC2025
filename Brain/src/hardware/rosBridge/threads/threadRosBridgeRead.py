@@ -121,19 +121,20 @@ class threadRosBridgeRead(ThreadWithStop):
                         self.logging.info("Published speed data")
 
                     # Traffic 데이터 처리
-                    traffic_data = self.trafficSubscriber.receive() # traffic 데이터 수신 (queuelist에서 구독 )
-                    print(f"traffic_data: {traffic_data}")
+                    traffic_data = self.trafficSubscriber.receive()
+                    if self.debugging:
+                        self.logging.info(f"[Traffic] Received data from subscriber: {traffic_data}")
+                    
                     if traffic_data is not None:
                         try:
-                            
-                            self.logging.info(f"[Traffic] Received data from queue: {traffic_data}")
                             # 데이터 검증
                             if self.validate_traffic_data(traffic_data):
                                 # JSON 형식으로 변환
                                 traffic_msg = String()
                                 traffic_msg.data = json.dumps(traffic_data)
                                 self.traffic_pub.publish(traffic_msg)
-                                self.logging.info(f"[Traffic] Published to ROS topic: {traffic_msg.data}")
+                                if self.debugging:
+                                    self.logging.info(f"[Traffic] Published to ROS topic: {traffic_msg.data}")
                             else:
                                 self.logging.warning(f"[Traffic] Invalid data format: {traffic_data}")
                         except Exception as e:
