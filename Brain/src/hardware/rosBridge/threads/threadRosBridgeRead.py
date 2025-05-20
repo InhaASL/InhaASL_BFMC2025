@@ -86,13 +86,14 @@ class threadRosBridgeRead(ThreadWithStop):
                         self.logging.info(f"[Traffic] Subscriber pipe status: {self.trafficSubscriber.isDataInPipe()}")
                         self.logging.info(f"[Traffic] Queue size: {self.queuesList['TrafficData'].qsize() if hasattr(self.queuesList['TrafficData'], 'qsize') else 'unknown'}")
                     
-                    traffic_data = self.trafficSubscriber.receive()
+                    # receiveWithBlock 사용
+                    traffic_data = self.trafficSubscriber.receiveWithBlock() if self.trafficSubscriber.isDataInPipe() else None
+                    
                     if self.debugging:
                         self.logging.info(f"[Traffic] Raw received data: {traffic_data}")
                         self.logging.info(f"[Traffic] Data type: {type(traffic_data)}")
                     
                     if traffic_data is not None:
-                        print(traffic_data)
                         try:
                             # 데이터 검증
                             if self.validate_traffic_data(traffic_data):
@@ -107,7 +108,7 @@ class threadRosBridgeRead(ThreadWithStop):
                                 
                                 # ROS 토픽 발행
                                 self.traffic_pub.publish(traffic_msg)
-                                rospy.loginfo(f"Published traffic data: {traffic_msg.data}")  # ROS 로그 추가
+                                rospy.loginfo(f"Published traffic data: {traffic_msg.data}")
                                 
                                 if self.debugging:
                                     self.logging.info(f"[Traffic] Published to ROS topic /traffic_data: {traffic_msg.data}")
