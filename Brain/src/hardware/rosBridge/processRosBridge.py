@@ -47,6 +47,10 @@ class processRosBridge(WorkerProcess):
                     master_uri = rospy.core.get_master_uri()
                     self.logging.info(f"ROS 마스터 URI: {master_uri}")
                     
+                    # ROS 토픽 목록 확인
+                    topics = rospy.get_published_topics()
+                    self.logging.info(f"현재 발행된 토픽 목록: {topics}")
+                    
                     # 시그널 핸들러 등록
                     signal.signal(signal.SIGINT, self._signal_handler)
                     signal.signal(signal.SIGTERM, self._signal_handler)

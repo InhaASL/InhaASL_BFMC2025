@@ -196,8 +196,10 @@ class threadRosBridgeRead(ThreadWithStop):
         # self.warningSubscriber = messageHandlerSubscriber(self.queuesList, WarningSignal, "lastOnly", True)
         self.semaphoresSubscriber = messageHandlerSubscriber(self.queuesList, Semaphores, "lastOnly", True)
         self.locationSubscriber = messageHandlerSubscriber(self.queuesList, Location, "lastOnly", True)
-        self.trafficSubscriber = messageHandlerSubscriber(self.queuesList, Location, "lastOnly", True)
+        self.trafficSubscriber = messageHandlerSubscriber(self.queuesList, TrafficData, "lastOnly", True)
 
+        if self.debugging:
+            self.logging.info("모든 구독자가 초기화되었습니다.")
 
     def validate_traffic_data(self, data):
         """트래픽 데이터 검증"""
