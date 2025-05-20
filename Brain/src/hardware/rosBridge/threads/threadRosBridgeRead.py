@@ -53,6 +53,9 @@ class threadRosBridgeRead(ThreadWithStop):
         self.semaphores_pub = rospy.Publisher('/semaphores_data', String, queue_size=10)
         self.cars_pub = rospy.Publisher('/cars_data', String, queue_size=10)
 
+        if self.debugging:
+            self.logging.info("ROS 퍼블리셔가 초기화되었습니다.")
+
         # 메시지 객체 초기화
         self.drive_msg = AckermannDriveStamped()
         self.current_speed = 0
@@ -68,6 +71,10 @@ class threadRosBridgeRead(ThreadWithStop):
 
     def run(self):
         try:
+            if self.debugging:
+                self.logging.info("threadRosBridgeRead 스레드가 시작되었습니다.")
+                self.logging.info("ROS 노드 상태: " + ("초기화됨" if rospy.core.is_initialized() else "초기화되지 않음"))
+
             while self._running and not rospy.is_shutdown():
                 try:
                     # IMU 데이터 처리
@@ -132,14 +139,19 @@ class threadRosBridgeRead(ThreadWithStop):
                                 # JSON 형식으로 변환
                                 traffic_msg = String()
                                 traffic_msg.data = json.dumps(traffic_data)
+                                
+                                # ROS 토픽 발행
                                 self.traffic_pub.publish(traffic_msg)
+                                
                                 if self.debugging:
-                                    self.logging.info(f"[Traffic] Published to ROS topic: {traffic_msg.data}")
+                                    self.logging.info(f"[Traffic] Published to ROS topic /traffic_data: {traffic_msg.data}")
+                                    self.logging.info(f"[Traffic] Publisher status: {self.traffic_pub.get_num_connections()} subscribers")
                             else:
                                 self.logging.warning(f"[Traffic] Invalid data format: {traffic_data}")
                         except Exception as e:
                             self.logging.error(f"[Traffic] Processing error: {str(e)}")
                             self.logging.error(f"[Traffic] Problematic data: {traffic_data}")
+                            self.logging.error("Stack trace:", exc_info=True)
 
                     # Semaphores 데이터 처리
                     semaphoresData = self.semaphoresSubscriber.receive()
@@ -156,12 +168,14 @@ class threadRosBridgeRead(ThreadWithStop):
 
                 except Exception as e:
                     self.logging.error(f"Data processing error: {str(e)}")
+                    self.logging.error("Stack trace:", exc_info=True)
                     continue
 
                 self.rate.sleep()
 
         except Exception as e:
             self.logging.error(f"Thread execution error: {str(e)}")
+            self.logging.error("Stack trace:", exc_info=True)
         finally:
             # ROS 노드 정리
             if not rospy.is_shutdown():
@@ -182,7 +196,7 @@ class threadRosBridgeRead(ThreadWithStop):
         # self.warningSubscriber = messageHandlerSubscriber(self.queuesList, WarningSignal, "lastOnly", True)
         self.semaphoresSubscriber = messageHandlerSubscriber(self.queuesList, Semaphores, "lastOnly", True)
         self.locationSubscriber = messageHandlerSubscriber(self.queuesList, Location, "lastOnly", True)
-        self.trafficSubscriber = messageHandlerSubscriber(self.queuesList, TrafficData, "lastOnly", True)
+        self.trafficSubscriber = messageHandlerSubscriber(self.queuesList, Location, "lastOnly", True)
 
 
     def validate_traffic_data(self, data):
