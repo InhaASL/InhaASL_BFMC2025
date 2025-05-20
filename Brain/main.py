@@ -150,7 +150,7 @@ if SerialHandler:
 
 # ------ New component runs starts here ------#
 if RosBridge:
-    processRosBridge = processRosBridge(queueList, logging, debugging = False)
+    processRosBridge = processRosBridge(queueList, logging, debugging = True)
     allProcesses.append(processRosBridge)
 # ------ New component runs ends here ------#
 
