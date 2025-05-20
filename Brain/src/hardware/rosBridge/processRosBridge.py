@@ -42,19 +42,7 @@ class processRosBridge(WorkerProcess):
                     if not rospy.core.is_initialized():
                         raise RuntimeError("ROS 노드 초기화 실패")
                     self.logging.info("ROS 노드가 성공적으로 초기화되었습니다.")
-                    
-                    # ROS 마스터 URI 확인
-                    master_uri = rospy.core.get_master_uri()
-                    self.logging.info(f"ROS 마스터 URI: {master_uri}")
-                    
-                    # ROS 토픽 목록 확인
-                    topics = rospy.get_published_topics()
-                    self.logging.info(f"현재 발행된 토픽 목록: {topics}")
-                    
-                    # 시그널 핸들러 등록
-                    signal.signal(signal.SIGINT, self._signal_handler)
-                    signal.signal(signal.SIGTERM, self._signal_handler)
-                    
+
                 except Exception as e:
                     self.logging.error(f"ROS 마스터 연결 실패: {str(e)}")
                     self.logging.error("Stack trace:", exc_info=True)

@@ -98,6 +98,7 @@ class SingleConnection(protocol.Protocol):
             logger.debug(f"Parsed data: {da}")
 
             if da["type"] == "location":
+                da["type"] = traffic # 데이터 타입 변경 시도 
                 da["id"] = self.factory.locsysID
                 logger.info(f"Sending location data: {da}")
                 self.factory.sendLocation.send(da)
