@@ -128,10 +128,13 @@ class threadRosBridgeRead(ThreadWithStop):
                         self.logging.info("Published speed data")
 
                     # Traffic 데이터 처리
-                    traffic_data = self.trafficSubscriber.receive()
-                    print(f"traffic data : {traffic_data}")
                     if self.debugging:
-                        self.logging.info(f"[Traffic] Received data from subscriber: {traffic_data}")
+                        self.logging.info("[Traffic] Checking for new traffic data...")
+                        self.logging.info(f"[Traffic] Subscriber pipe status: {self.trafficSubscriber.isDataInPipe()}")
+                    
+                    traffic_data = self.trafficSubscriber.receive()
+                    if self.debugging:
+                        self.logging.info(f"[Traffic] Raw received data: {traffic_data}")
                     
                     if traffic_data is not None:
                         try:
@@ -153,6 +156,8 @@ class threadRosBridgeRead(ThreadWithStop):
                             self.logging.error(f"[Traffic] Processing error: {str(e)}")
                             self.logging.error(f"[Traffic] Problematic data: {traffic_data}")
                             self.logging.error("Stack trace:", exc_info=True)
+                    elif self.debugging:
+                        self.logging.info("[Traffic] No traffic data received")
 
                     # Semaphores 데이터 처리
                     semaphoresData = self.semaphoresSubscriber.receive()
@@ -185,22 +190,24 @@ class threadRosBridgeRead(ThreadWithStop):
 
     def subscribe(self):
         """Subscribes to the messages you are interested in"""
-
-        self.enableButtonSubscriber = messageHandlerSubscriber(self.queuesList, EnableButton, "lastOnly", True)
-        # self.batteryLvlSubscriber = messageHandlerSubscriber(self.queuesList, BatteryLvl, "lastOnly", True)
-        # self.instantConsumptionSubscriber = messageHandlerSubscriber(self.queuesList, InstantConsumption, "lastOnly", True)
-        self.imuDataSubscriber = messageHandlerSubscriber(self.queuesList, ImuData, "lastOnly", True)
-        # self.imuAckSubscriber = messageHandlerSubscriber(self.queuesList, ImuAck, "lastOnly", True)
-        # self.resourceMonitorSubscriber = messageHandlerSubscriber(self.queuesList, ResourceMonitor, "lastOnly", True)
-        self.currentSpeedSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSpeed, "lastOnly", True)
-        self.currentSteerSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSteer, "lastOnly", True)
-        # self.warningSubscriber = messageHandlerSubscriber(self.queuesList, WarningSignal, "lastOnly", True)
-        self.semaphoresSubscriber = messageHandlerSubscriber(self.queuesList, Semaphores, "lastOnly", True)
-        self.locationSubscriber = messageHandlerSubscriber(self.queuesList, Location, "lastOnly", True)
-        self.trafficSubscriber = messageHandlerSubscriber(self.queuesList, TrafficData, "lastOnly", True)
-
-        if self.debugging:
-            self.logging.info("모든 구독자가 초기화되었습니다.")
+        try:
+            self.enableButtonSubscriber = messageHandlerSubscriber(self.queuesList, EnableButton, "lastOnly", True)
+            self.imuDataSubscriber = messageHandlerSubscriber(self.queuesList, ImuData, "lastOnly", True)
+            self.currentSpeedSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSpeed, "lastOnly", True)
+            self.currentSteerSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSteer, "lastOnly", True)
+            self.semaphoresSubscriber = messageHandlerSubscriber(self.queuesList, Semaphores, "lastOnly", True)
+            self.locationSubscriber = messageHandlerSubscriber(self.queuesList, Location, "lastOnly", True)
+            
+            # TrafficData 구독 설정 변경
+            self.trafficSubscriber = messageHandlerSubscriber(self.queuesList, TrafficData, "fifo", True)
+            
+            if self.debugging:
+                self.logging.info("모든 구독자가 초기화되었습니다.")
+                self.logging.info(f"TrafficData 구독 설정: {self.trafficSubscriber._message.Queue.value}")
+                self.logging.info(f"TrafficData 메시지 타입: {self.trafficSubscriber._message.msgType.value}")
+        except Exception as e:
+            self.logging.error(f"구독자 초기화 중 오류 발생: {str(e)}")
+            self.logging.error("Stack trace:", exc_info=True)
 
     def validate_traffic_data(self, data):
         """트래픽 데이터 검증"""
