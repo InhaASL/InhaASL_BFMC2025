@@ -131,9 +131,9 @@ class SingleConnection(protocol.Protocol):
                         "msgType": "dict",
                         "msgValue": da
                     }
-                    logger.info(f"Sending message to TrafficData queue: {message}")
+                    #logger.info(f"Sending message to TrafficData queue: {message}")
                     self.factory.queue["TrafficData"].put(message)
-                    logger.info("Traffic data successfully sent to TrafficData queue")
+                    #logger.info("Traffic data successfully sent to TrafficData queue")
                 except Exception as e:
                     logger.error(f"Error sending traffic data: {str(e)}")
                     logger.error("Stack trace:", exc_info=True)

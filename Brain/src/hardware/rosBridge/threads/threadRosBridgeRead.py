@@ -76,9 +76,51 @@ class threadRosBridgeRead(ThreadWithStop):
             if self.debugging:
                 self.logging.info("threadRosBridgeRead 스레드가 시작되었습니다.")
                 self.logging.info("ROS 노드 상태: " + ("초기화됨" if rospy.core.is_initialized() else "초기화되지 않음"))
+                self.logging.info(f"TrafficData 퍼블리셔 상태: {self.traffic_pub.get_num_connections()} subscribers")
 
             while self._running and not rospy.is_shutdown():
                 try:
+                    # Traffic 데이터 처리
+                    if self.debugging:
+                        self.logging.info("[Traffic] Checking for new traffic data...")
+                        self.logging.info(f"[Traffic] Subscriber pipe status: {self.trafficSubscriber.isDataInPipe()}")
+                        self.logging.info(f"[Traffic] Queue size: {self.queuesList['TrafficData'].qsize() if hasattr(self.queuesList['TrafficData'], 'qsize') else 'unknown'}")
+                    
+                    traffic_data = self.trafficSubscriber.receive()
+                    if self.debugging:
+                        self.logging.info(f"[Traffic] Raw received data: {traffic_data}")
+                        self.logging.info(f"[Traffic] Data type: {type(traffic_data)}")
+                    
+                    if traffic_data is not None:
+                        print(traffic_data)
+                        try:
+                            # 데이터 검증
+                            if self.validate_traffic_data(traffic_data):
+                                # Float64MultiArray 메시지 생성
+                                traffic_msg = Float64MultiArray()
+                                traffic_msg.data = [
+                                    float(traffic_data["x"]),
+                                    float(traffic_data["y"]),
+                                    float(traffic_data["z"]),
+                                    float(traffic_data["quality"])
+                                ]
+                                
+                                # ROS 토픽 발행
+                                self.traffic_pub.publish(traffic_msg)
+                                rospy.loginfo(f"Published traffic data: {traffic_msg.data}")  # ROS 로그 추가
+                                
+                                if self.debugging:
+                                    self.logging.info(f"[Traffic] Published to ROS topic /traffic_data: {traffic_msg.data}")
+                                    self.logging.info(f"[Traffic] Publisher status: {self.traffic_pub.get_num_connections()} subscribers")
+                            else:
+                                self.logging.warning(f"[Traffic] Invalid data format: {traffic_data}")
+                        except Exception as e:
+                            self.logging.error(f"[Traffic] Processing error: {str(e)}")
+                            self.logging.error(f"[Traffic] Problematic data: {traffic_data}")
+                            self.logging.error("Stack trace:", exc_info=True)
+                    elif self.debugging:
+                        self.logging.info("[Traffic] No traffic data received")
+
                     # IMU 데이터 처리
                     imuData = self.imuDataSubscriber.receive()
                     if imuData is not None:
@@ -128,43 +170,6 @@ class threadRosBridgeRead(ThreadWithStop):
                     self.speed_pub.publish(self.drive_msg)
                     if self.debugging:
                         self.logging.info("Published speed data")
-
-                    # Traffic 데이터 처리
-                    if self.debugging:
-                        self.logging.info("[Traffic] Checking for new traffic data...")
-                        self.logging.info(f"[Traffic] Subscriber pipe status: {self.trafficSubscriber.isDataInPipe()}")
-                    
-                    traffic_data = self.trafficSubscriber.receive()
-                    if self.debugging:
-                        self.logging.info(f"[Traffic] Raw received data: {traffic_data}")
-                    
-                    if traffic_data is not None:
-                        try:
-                            # 데이터 검증
-                            if self.validate_traffic_data(traffic_data):
-                                # Float64MultiArray 메시지 생성
-                                traffic_msg = Float64MultiArray()
-                                traffic_msg.data = [
-                                    float(traffic_data["x"]),
-                                    float(traffic_data["y"]),
-                                    float(traffic_data["z"]),
-                                    float(traffic_data["quality"])
-                                ]
-                                
-                                # ROS 토픽 발행
-                                self.traffic_pub.publish(traffic_msg)
-                                
-                                if self.debugging:
-                                    self.logging.info(f"[Traffic] Published to ROS topic /traffic_data: {traffic_msg.data}")
-                                    self.logging.info(f"[Traffic] Publisher status: {self.traffic_pub.get_num_connections()} subscribers")
-                            else:
-                                self.logging.warning(f"[Traffic] Invalid data format: {traffic_data}")
-                        except Exception as e:
-                            self.logging.error(f"[Traffic] Processing error: {str(e)}")
-                            self.logging.error(f"[Traffic] Problematic data: {traffic_data}")
-                            self.logging.error("Stack trace:", exc_info=True)
-                    elif self.debugging:
-                        self.logging.info("[Traffic] No traffic data received")
 
                     # Semaphores 데이터 처리
                     semaphoresData = self.semaphoresSubscriber.receive()
