@@ -3,6 +3,7 @@
 import rospy
 from sensor_msgs.msg import Imu
 from ackermann_msgs.msg import AckermannDriveStamped
+from std_msgs.msg import Float64MultiArray
 import tf
 import ast
 import math
@@ -49,7 +50,7 @@ class threadRosBridgeRead(ThreadWithStop):
         # ROS 퍼블리셔 초기화
         self.imu_pub = rospy.Publisher('/imu', Imu, queue_size=10)
         self.speed_pub = rospy.Publisher('/current_speed', AckermannDriveStamped, queue_size=10)
-        self.traffic_pub = rospy.Publisher('/traffic_data', TrafficData, queue_size=10)
+        self.traffic_pub = rospy.Publisher('/traffic_data', Float64MultiArray, queue_size=10)
         self.semaphores_pub = rospy.Publisher('/semaphores_data', String, queue_size=10)
         self.cars_pub = rospy.Publisher('/cars_data', String, queue_size=10)
 
@@ -141,18 +142,20 @@ class threadRosBridgeRead(ThreadWithStop):
                         try:
                             # 데이터 검증
                             if self.validate_traffic_data(traffic_data):
-                                # TrafficData 메시지 생성
-                                traffic_msg = TrafficData()
-                                traffic_msg.x = float(traffic_data["x"])
-                                traffic_msg.y = float(traffic_data["y"])
-                                traffic_msg.z = float(traffic_data["z"])
-                                traffic_msg.quality = int(traffic_data["quality"])
+                                # Float64MultiArray 메시지 생성
+                                traffic_msg = Float64MultiArray()
+                                traffic_msg.data = [
+                                    float(traffic_data["x"]),
+                                    float(traffic_data["y"]),
+                                    float(traffic_data["z"]),
+                                    float(traffic_data["quality"])
+                                ]
                                 
                                 # ROS 토픽 발행
                                 self.traffic_pub.publish(traffic_msg)
                                 
                                 if self.debugging:
-                                    self.logging.info(f"[Traffic] Published to ROS topic /traffic_data: x={traffic_msg.x}, y={traffic_msg.y}, z={traffic_msg.z}, quality={traffic_msg.quality}")
+                                    self.logging.info(f"[Traffic] Published to ROS topic /traffic_data: {traffic_msg.data}")
                                     self.logging.info(f"[Traffic] Publisher status: {self.traffic_pub.get_num_connections()} subscribers")
                             else:
                                 self.logging.warning(f"[Traffic] Invalid data format: {traffic_data}")
