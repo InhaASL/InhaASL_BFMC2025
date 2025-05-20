@@ -98,10 +98,20 @@ class SingleConnection(protocol.Protocol):
             logger.debug(f"Parsed data: {da}")
 
             if da["type"] == "location":
-                da["type"] = traffic # 데이터 타입 변경 시도 
-                da["id"] = self.factory.locsysID
-                logger.info(f"Sending location data: {da}")
-                self.factory.sendLocation.send(da)
+                # da["type"] = traffic # 데이터 타입 변경 시도 
+                # da["id"] = self.factory.locsysID
+                # logger.info(f"Sending location data: {da}")
+                # self.factory.sendLocation.send(da)
+                # location 데이터를 traffic 데이터로 변환
+                traffic_data = {
+                    "type": "traffic",
+                    "x": da.get("x", 0.0),
+                    "y": da.get("y", 0.0),
+                    "z": da.get("z", 0.0),
+                    "quality": da.get("quality", 1)
+                }
+                logger.info(f"Converting location data to traffic data: {traffic_data}")
+                self.factory.sendTrafficData.send(traffic_data)
             elif da["type"] == "traffic":
                 logger.info(f"Sending traffic data: {da}")
                 self.factory.sendTrafficData.send(da)
