@@ -85,10 +85,11 @@ class processTrafficCommunication(WorkerProcess):
                 self.logging.info(f"Key file: {self.filename}")
 
             # 실제 데이터를 받아오는 부분
+            device_pos = self.shared_memory.get()
             traffic_data = {
                 "type": "traffic",
-                "x": self.shared_memory.get("devicePos")[0] if self.shared_memory.get("devicePos") else 0.0,
-                "y": self.shared_memory.get("devicePos")[1] if self.shared_memory.get("devicePos") else 0.0,
+                "x": device_pos.get("devicePos", [0.0, 0.0])[0],
+                "y": device_pos.get("devicePos", [0.0, 0.0])[1],
                 "z": 0.0,
                 "quality": 1
             }
