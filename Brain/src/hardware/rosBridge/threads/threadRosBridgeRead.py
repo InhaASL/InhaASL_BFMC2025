@@ -67,7 +67,7 @@ class threadRosBridgeRead(ThreadWithStop):
         self.subscribe()
         
         # 발행 주기 설정 (30Hz)
-        self.rate = rospy.Rate(30)
+        self.rate = rospy.Rate(60)
         
         super(threadRosBridgeRead, self).__init__()
 
@@ -110,7 +110,7 @@ class threadRosBridgeRead(ThreadWithStop):
                                     
                                     # ROS 토픽 발행
                                     self.traffic_pub.publish(traffic_msg)
-                                    rospy.loginfo(f"Published traffic data: {traffic_msg.data}")
+                                    rospy.loginfo(f"Published traffic data: {traffic_msg.data}") #이게 한번 떴는데??
                                     
                                     if self.debugging:
                                         self.logging.info(f"[Traffic] Published to ROS topic /traffic_data: {traffic_msg.data}")
