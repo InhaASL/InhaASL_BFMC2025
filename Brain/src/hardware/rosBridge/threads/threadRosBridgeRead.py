@@ -49,12 +49,13 @@ class threadRosBridgeRead(ThreadWithStop):
         # ROS 퍼블리셔 초기화
         self.imu_pub = rospy.Publisher('/imu', Imu, queue_size=10)
         self.speed_pub = rospy.Publisher('/current_speed', AckermannDriveStamped, queue_size=10)
-        self.traffic_pub = rospy.Publisher('/traffic_data', String, queue_size=10)
+        self.traffic_pub = rospy.Publisher('/traffic_data', TrafficData, queue_size=10)
         self.semaphores_pub = rospy.Publisher('/semaphores_data', String, queue_size=10)
         self.cars_pub = rospy.Publisher('/cars_data', String, queue_size=10)
 
         if self.debugging:
             self.logging.info("ROS 퍼블리셔가 초기화되었습니다.")
+            self.logging.info(f"TrafficData 퍼블리셔 상태: {self.traffic_pub.get_num_connections()} subscribers")
 
         # 메시지 객체 초기화
         self.drive_msg = AckermannDriveStamped()
@@ -140,15 +141,18 @@ class threadRosBridgeRead(ThreadWithStop):
                         try:
                             # 데이터 검증
                             if self.validate_traffic_data(traffic_data):
-                                # JSON 형식으로 변환
-                                traffic_msg = String()
-                                traffic_msg.data = json.dumps(traffic_data)
+                                # TrafficData 메시지 생성
+                                traffic_msg = TrafficData()
+                                traffic_msg.x = float(traffic_data["x"])
+                                traffic_msg.y = float(traffic_data["y"])
+                                traffic_msg.z = float(traffic_data["z"])
+                                traffic_msg.quality = int(traffic_data["quality"])
                                 
                                 # ROS 토픽 발행
                                 self.traffic_pub.publish(traffic_msg)
                                 
                                 if self.debugging:
-                                    self.logging.info(f"[Traffic] Published to ROS topic /traffic_data: {traffic_msg.data}")
+                                    self.logging.info(f"[Traffic] Published to ROS topic /traffic_data: x={traffic_msg.x}, y={traffic_msg.y}, z={traffic_msg.z}, quality={traffic_msg.quality}")
                                     self.logging.info(f"[Traffic] Publisher status: {self.traffic_pub.get_num_connections()} subscribers")
                             else:
                                 self.logging.warning(f"[Traffic] Invalid data format: {traffic_data}")
@@ -224,10 +228,14 @@ class threadRosBridgeRead(ThreadWithStop):
                 self.logging.warning(f"Invalid message type: {data['type']}")
                 return False
                 
+            # 데이터 타입 변환 가능 여부 확인
             float(data['x'])
             float(data['y'])
             float(data['z'])
             int(data['quality'])
+            
+            if self.debugging:
+                self.logging.info(f"[Traffic] Data validation successful: {data}")
             return True
         except (ValueError, TypeError) as e:
             self.logging.warning(f"Invalid data type in traffic data: {str(e)}")
