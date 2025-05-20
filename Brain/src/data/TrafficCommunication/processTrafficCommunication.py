@@ -99,13 +99,13 @@ class processTrafficCommunication(WorkerProcess):
             sender = messageHandlerSender(self.queuesList, TrafficData)
             sender.send(traffic_data) 
             
-            # # TrafficData 메시지로 전송
-            # self.queuesList["TrafficData"].put({
-            #     "Owner": "TrafficCommunication",
-            #     "msgID": "TrafficData",
-            #     "msgType": "dict",
-            #     "msgValue": traffic_data
-            # })
+            # TrafficData 메시지로 전송
+            self.queuesList["TrafficData"].put({
+                "Owner": "TrafficCommunication",
+                "msgID": "TrafficData",
+                "msgType": "dict",
+                "msgValue": traffic_data
+            })
             
             if self.debugging:
                 self.logging.info(f"Traffic data sent to queue: {traffic_data}")

@@ -122,6 +122,7 @@ class threadRosBridgeRead(ThreadWithStop):
 
                     # Traffic 데이터 처리
                     traffic_data = self.trafficSubscriber.receive() # traffic 데이터 수신 (queuelist에서 구독 )
+                    print(f"traffic_data: {traffic_data}")
                     if traffic_data is not None:
                         try:
                             
@@ -160,6 +161,10 @@ class threadRosBridgeRead(ThreadWithStop):
 
         except Exception as e:
             self.logging.error(f"Thread execution error: {str(e)}")
+        finally:
+            # ROS 노드 정리
+            if not rospy.is_shutdown():
+                rospy.signal_shutdown('Thread stopped')
             self.stop()
 
     def subscribe(self):
@@ -219,4 +224,15 @@ class threadRosBridgeRead(ThreadWithStop):
             return False
         
         return all(field in data for field in required_fields)
+
+    def stop(self):
+        """스레드를 안전하게 종료하고 ROS 리소스를 정리합니다."""
+        self._running = False
+        # ROS 퍼블리셔 정리
+        self.imu_pub.unregister()
+        self.speed_pub.unregister()
+        self.traffic_pub.unregister()
+        self.semaphores_pub.unregister()
+        self.cars_pub.unregister()
+        super().stop()
 

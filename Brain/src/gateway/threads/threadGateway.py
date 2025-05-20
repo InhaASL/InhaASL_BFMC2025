@@ -121,7 +121,7 @@ class threadGateway(ThreadWithStop):
 
     def run(self):
         """This function will take the messages in priority order form the queues.\n
-        the prioirty is: Critical > Warning > General
+        the prioirty is: Critical > Warning > General > TrafficData
         """
         
         while self._running:
@@ -134,6 +134,8 @@ class threadGateway(ThreadWithStop):
                 message = self.queuesList["Warning"].get()
             elif not self.queuesList["General"].empty():
                 message = self.queuesList["General"].get()
+            elif not self.queuesList["TrafficData"].empty():
+                message = self.queuesList["TrafficData"].get()
             if message is not None:
                 self.send(message)
             if not self.queuesList["Config"].empty():
