@@ -98,10 +98,6 @@ class SingleConnection(protocol.Protocol):
             logger.debug(f"Parsed data: {da}")
 
             if da["type"] == "location":
-                # da["type"] = traffic # 데이터 타입 변경 시도 
-                # da["id"] = self.factory.locsysID
-                # logger.info(f"Sending location data: {da}")
-                # self.factory.sendLocation.send(da)
                 # location 데이터를 traffic 데이터로 변환
                 traffic_data = {
                     "type": "traffic",
@@ -113,12 +109,14 @@ class SingleConnection(protocol.Protocol):
                 logger.info(f"Converting location data to traffic data: {traffic_data}")
                 try:
                     # TrafficData 큐에 직접 전송
-                    self.factory.queue["TrafficData"].put({
+                    message = {
                         "Owner": "TrafficCommunication",
                         "msgID": "TrafficData",
                         "msgType": "dict",
                         "msgValue": traffic_data
-                    })
+                    }
+                    logger.info(f"Sending message to TrafficData queue: {message}")
+                    self.factory.queue["TrafficData"].put(message)
                     logger.info("Traffic data successfully sent to TrafficData queue")
                 except Exception as e:
                     logger.error(f"Error sending traffic data: {str(e)}")
@@ -127,12 +125,14 @@ class SingleConnection(protocol.Protocol):
                 logger.info(f"Sending traffic data: {da}")
                 try:
                     # TrafficData 큐에 직접 전송
-                    self.factory.queue["TrafficData"].put({
+                    message = {
                         "Owner": "TrafficCommunication",
                         "msgID": "TrafficData",
                         "msgType": "dict",
                         "msgValue": da
-                    })
+                    }
+                    logger.info(f"Sending message to TrafficData queue: {message}")
+                    self.factory.queue["TrafficData"].put(message)
                     logger.info("Traffic data successfully sent to TrafficData queue")
                 except Exception as e:
                     logger.error(f"Error sending traffic data: {str(e)}")

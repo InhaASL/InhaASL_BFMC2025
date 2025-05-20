@@ -163,12 +163,11 @@ class threadRosBridgeRead(ThreadWithStop):
                     semaphoresData = self.semaphoresSubscriber.receive()
                     if semaphoresData is not None:
                         try:
-                            if self.validate_semaphores_data(semaphoresData):
-                                semaphores_msg = String()
-                                semaphores_msg.data = json.dumps(semaphoresData)
-                                self.semaphores_pub.publish(semaphores_msg)
-                                if self.debugging:
-                                    self.logging.info("Published semaphores data")
+                            semaphores_msg = String()
+                            semaphores_msg.data = json.dumps(semaphoresData)
+                            self.semaphores_pub.publish(semaphores_msg)
+                            if self.debugging:
+                                self.logging.info("Published semaphores data")
                         except Exception as e:
                             self.logging.error(f"Semaphores data processing error: {str(e)}")
 
@@ -190,24 +189,22 @@ class threadRosBridgeRead(ThreadWithStop):
 
     def subscribe(self):
         """Subscribes to the messages you are interested in"""
-        try:
-            self.enableButtonSubscriber = messageHandlerSubscriber(self.queuesList, EnableButton, "lastOnly", True)
-            self.imuDataSubscriber = messageHandlerSubscriber(self.queuesList, ImuData, "lastOnly", True)
-            self.currentSpeedSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSpeed, "lastOnly", True)
-            self.currentSteerSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSteer, "lastOnly", True)
-            self.semaphoresSubscriber = messageHandlerSubscriber(self.queuesList, Semaphores, "lastOnly", True)
-            self.locationSubscriber = messageHandlerSubscriber(self.queuesList, Location, "lastOnly", True)
-            
-            # TrafficData 구독 설정 변경
-            self.trafficSubscriber = messageHandlerSubscriber(self.queuesList, TrafficData, "fifo", True)
-            
-            if self.debugging:
-                self.logging.info("모든 구독자가 초기화되었습니다.")
-                self.logging.info(f"TrafficData 구독 설정: {self.trafficSubscriber._message.Queue.value}")
-                self.logging.info(f"TrafficData 메시지 타입: {self.trafficSubscriber._message.msgType.value}")
-        except Exception as e:
-            self.logging.error(f"구독자 초기화 중 오류 발생: {str(e)}")
-            self.logging.error("Stack trace:", exc_info=True)
+
+        self.enableButtonSubscriber = messageHandlerSubscriber(self.queuesList, EnableButton, "lastOnly", True)
+        # self.batteryLvlSubscriber = messageHandlerSubscriber(self.queuesList, BatteryLvl, "lastOnly", True)
+        # self.instantConsumptionSubscriber = messageHandlerSubscriber(self.queuesList, InstantConsumption, "lastOnly", True)
+        self.imuDataSubscriber = messageHandlerSubscriber(self.queuesList, ImuData, "lastOnly", True)
+        # self.imuAckSubscriber = messageHandlerSubscriber(self.queuesList, ImuAck, "lastOnly", True)
+        # self.resourceMonitorSubscriber = messageHandlerSubscriber(self.queuesList, ResourceMonitor, "lastOnly", True)
+        self.currentSpeedSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSpeed, "lastOnly", True)
+        self.currentSteerSubscriber = messageHandlerSubscriber(self.queuesList, CurrentSteer, "lastOnly", True)
+        # self.warningSubscriber = messageHandlerSubscriber(self.queuesList, WarningSignal, "lastOnly", True)
+        self.semaphoresSubscriber = messageHandlerSubscriber(self.queuesList, Semaphores, "lastOnly", True)
+        self.locationSubscriber = messageHandlerSubscriber(self.queuesList, Location, "lastOnly", True)
+        self.trafficSubscriber = messageHandlerSubscriber(self.queuesList, TrafficData, "lastOnly", True)
+
+        if self.debugging:
+            self.logging.info("모든 구독자가 초기화되었습니다.")
 
     def validate_traffic_data(self, data):
         """트래픽 데이터 검증"""

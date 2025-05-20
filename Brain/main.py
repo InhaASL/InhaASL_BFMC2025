@@ -140,7 +140,7 @@ if Semaphores:
 
 # Initializing GPS
 if TrafficCommunication:
-    processTrafficCommunication = processTrafficCommunication(queueList, logging, 3, debugging = False)
+    processTrafficCommunication = processTrafficCommunication(queueList, logging, 3, debugging = True)
     allProcesses.append(processTrafficCommunication)
 
 # Initializing serial connection NUCLEO - > PI
