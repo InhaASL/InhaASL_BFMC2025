@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Copyright (c) 2019, Bosch Engineering Center Cluj and BFMC organizers
 # All rights reserved.
 
@@ -29,7 +30,7 @@
 import json
 import time
 import logging
-from src.utils.messages.allMessages import Location, TrafficData
+from src.utils.messages.allMessages import Location
 from src.utils.messages.messageHandlerSender import messageHandlerSender
 from twisted.internet import protocol
 
@@ -39,6 +40,7 @@ logger = logging.getLogger('TrafficClient')
 
 # The server itself. Creates a new Protocol for each new connection and has the info for all of them.
 class tcpClient(protocol.ClientFactory):
+    """Factory that 유지 TCP 연결 및 메시지 송수신."""
     def __init__(self, connectionBrokenCllbck, locsysID, locsysFrequency, queue):
         self.connectiondata = None
         self.connection = None
@@ -48,7 +50,7 @@ class tcpClient(protocol.ClientFactory):
         self.locsysFrequency = locsysFrequency
         self.queue = queue
         self.sendLocation = messageHandlerSender(self.queue, Location)
-        self.sendTrafficData = messageHandlerSender(self.queue, TrafficData)
+        #self.sendTrafficData = messageHandlerSender(self.queue, TrafficData)
         logger.info("TCP Client initialized")
 
     def clientConnectionLost(self, connector, reason):
@@ -69,7 +71,8 @@ class tcpClient(protocol.ClientFactory):
         conn = SingleConnection()
         conn.factory = self
         return conn
-
+    
+    # 편의 함수: 서버로 직접 전송
     def send_data_to_server(self, message):
         logger.debug(f"Sending data to server: {message}")
         self.connection.send_data(message)
@@ -77,6 +80,9 @@ class tcpClient(protocol.ClientFactory):
 
 # One class is generated for each new connection
 class SingleConnection(protocol.Protocol):
+    """실제 소켓 connection마다 하나씩 생성."""
+
+    # ───────── Connect ─────────  ㅡㅡ> 문제없음
     def connectionMade(self):
         peer = self.transport.getPeer()
         self.factory.connectiondata = peer.host + ":" + str(peer.port)
@@ -84,7 +90,16 @@ class SingleConnection(protocol.Protocol):
         self.subscribeToLocaitonData(self.factory.locsysID, self.factory.locsysFrequency)
         logger.info(f"Connection with server established: {self.factory.connectiondata}")
 
+        #서버에 위치 데이터 구독 요청
+        #self._subscribe_to_location(self.factory.locsysID, self.factory.locsysFrequency)
+
+
+    # ───────── Receive ─────────
     def dataReceived(self, data):
+        """
+        서버에서 오는 JSON 문자열을 파싱해서
+        내부 큐 → Gateway → ROS 파이프라인으로 넣는다.
+        """
         try:
             dat = data.decode()
             logger.debug(f"Raw data received: {dat}")
@@ -97,8 +112,10 @@ class SingleConnection(protocol.Protocol):
             da = json.loads(dat)
             logger.debug(f"Parsed data: {da}")
 
+            # ① location 패킷 → traffic 포맷 변환
             if da["type"] == "location":
-                # location 데이터를 traffic 데이터로 변환
+
+                #traffic_data 딕셔너리 형태 포맷 방법
                 traffic_data = {
                     "type": "traffic",
                     "x": float(da.get("x", 0.0)),
@@ -116,11 +133,14 @@ class SingleConnection(protocol.Protocol):
                         "msgValue": traffic_data
                     }
                     #logger.info(f"Sending message to TrafficData queue: {message}")
-                    self.factory.queue["TrafficData"].put(message)
+                    #self.factory.queue["TrafficData"].put(message)
+                    self.factory.sendLocation.send(da)                  ### CHANGED
                     #logger.info("Traffic data successfully sent to TrafficData queue") #확인완료 
                 except Exception as e:
                     logger.error(f"Error sending traffic data: {str(e)}")
                     logger.error("Stack trace:", exc_info=True)
+
+            # ② 이미 traffic 패킷인 경우
             elif da["type"] == "traffic":
                 logger.info(f"Sending traffic data: {da}")
                 try:
@@ -137,12 +157,14 @@ class SingleConnection(protocol.Protocol):
                 except Exception as e:
                     logger.error(f"Error sending traffic data: {str(e)}")
                     logger.error("Stack trace:", exc_info=True)
+            # 3. 데이터 타입을 모르겠을때
             else:
                 logger.warning(f"Received unknown message type: {da['type']}")
-        except Exception as e:
-            logger.error(f"Error processing received data: {str(e)}")
-            logger.error(f"Problematic data: {data}")
 
+        except Exception as e:
+            logger.error(f"Error TCP client data recieved: {str(e)}") #에러 디버깅
+
+    # ───────── Utility ───────── ㅡㅡ> 서버로 데이터 전송 
     def send_data(self, message):
         msg = json.dumps(message)
         logger.debug(f"Sending message: {msg}")
