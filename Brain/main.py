@@ -70,7 +70,7 @@ from src.hardware.rosBridge.processRosBridge import processRosBridge
 
 
 # ======================================== SETTING UP ====================================
-allProcesses = list()
+allProcesses = list() #모든 프로세스 리스트에 추가 
 
 queueList = {
     "Critical": Queue(),

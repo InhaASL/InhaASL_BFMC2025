@@ -1,0 +1,74 @@
+# EKF Ackermann Odometry Configuration
+
+# 기본 파라미터
+wheel_base: 0.26
+use_tf: true
+
+# 토픽 및 프레임 설정
+odom_topic: "odom"
+drive_topic: "current_speed"
+imu_topic: "/d455/imu"
+odom_frame: "odom"
+base_frame: "base_link"
+
+# 센서 캘리브레이션 gain 값들
+# drive_gain: 속도 센서 보정 계수 (센서값 / 실제값)
+# - 높을수록 센서가 실제보다 과대측정함을 의미
+# - 바퀴 슬립, 엔코더 오차, 타이어 반지름 오차 등을 보정
+drive_gain: 9.05
+
+# steering_gain: 조향각 보정 계수 (센서값 / 실제값)  
+# - 높을수록 조향 시스템이 실제보다 과대반응함을 의미
+# - 조향 백래시, 기어비 오차, 조향 액추에이터 특성 등을 보정
+steering_gain: 11.0
+
+# Gain 캘리브레이션 방법:
+# 1. drive_gain: 직선 주행 시 이동거리 측정
+#    - 실제거리 / 센서로계산된거리 = drive_gain
+# 2. steering_gain: 제자리 회전 시 각도 측정  
+#    - 실제회전각 / 센서로계산된각 = steering_gain
+# 3. 여러 속도와 조향각에서 반복 측정하여 평균값 사용
+
+# 프로세스 노이즈 공분산 행렬 Q (5x5)
+# 상태 벡터: [x, y, theta, v, omega]
+process_covariance: [
+  0.1,  0.0,  0.0,  0.0,  0.0,   # x
+  0.0,  0.1,  0.0,  0.0,  0.0,   # y  
+  0.0,  0.0,  0.1,  0.0,  0.0,   # theta
+  0.0,  0.0,  0.0,  0.1,  0.0,   # v
+  0.0,  0.0,  0.0,  0.0,  0.1    # omega
+]
+
+# Ackermann 관측 노이즈 공분산 행렬 R (2x2)
+# 관측 벡터: [v, omega]
+ackermann_covariance: [
+  0.2,  0.0,   # v
+  0.0,  0.2    # omega
+]
+
+# IMU 관측 노이즈 공분산 행렬 R (1x1)
+# 관측 벡터: [omega_z]
+imu_covariance: [0.05]
+
+# 초기 상태 공분산 행렬 P (5x5)
+initial_covariance: [
+  1.0,  0.0,  0.0,  0.0,  0.0,   # x
+  0.0,  1.0,  0.0,  0.0,  0.0,   # y
+  0.0,  0.0,  1.0,  0.0,  0.0,   # theta
+  0.0,  0.0,  0.0,  1.0,  0.0,   # v
+  0.0,  0.0,  0.0,  0.0,  1.0    # omega
+]
+
+# 고급 설정 예시 (상관관계가 있는 경우)
+# process_covariance: [
+#   0.1,  0.05, 0.0,  0.0,  0.0,   # x와 y 사이에 약간의 상관관계
+#   0.05, 0.1,  0.0,  0.0,  0.0,   
+#   0.0,  0.0,  0.1,  0.02, 0.0,   # theta와 v 사이에 약간의 상관관계
+#   0.0,  0.0,  0.02, 0.1,  0.0,   
+#   0.0,  0.0,  0.0,  0.0,  0.1    
+# ]
+
+# ackermann_covariance: [
+#   0.2,  0.05,   # v와 omega 사이에 약간의 상관관계
+#   0.05, 0.2     
+# ]
