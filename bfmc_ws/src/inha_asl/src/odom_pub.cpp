@@ -24,7 +24,7 @@ public:
         nh_.param("wheel_base", wheel_base_, 0.26);   
         nh_.param("use_tf", use_tf_, true);          
         nh_.param("drive_gain", driving_gain_, 9.05);
-        nh_.param("steering_gain", steering_gain_, 11.0);
+        nh_.param("steering_gain", steering_gain_, 10.0);
 
         odom_pub_ = nh_.advertise<nav_msgs::Odometry>("odom", 50);
         drive_sub_ = nh_.subscribe("current_speed", 10, &AckermannOdom::driveCallback, this);
