@@ -102,8 +102,8 @@ logging = logging.getLogger()
 
 Dashboard = False
 Camera = False
-Semaphores = True
-TrafficCommunication = True
+Semaphores = False
+TrafficCommunication = False
 SerialHandler = True
 
 # ------ New component flags starts here ------#
@@ -150,7 +150,7 @@ if SerialHandler:
 
 # ------ New component runs starts here ------#
 if RosBridge:
-    processRosBridge = processRosBridge(queueList, logging, debugging = True)
+    processRosBridge = processRosBridge(queueList, logging, debugging = False)
     allProcesses.append(processRosBridge)
 # ------ New component runs ends here ------#
 

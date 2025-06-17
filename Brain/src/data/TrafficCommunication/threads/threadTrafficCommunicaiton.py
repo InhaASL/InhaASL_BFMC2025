@@ -66,7 +66,7 @@ class threadTrafficCommunication(ThreadWithStop):
         """If the server disconnects, we stop the factory listening and start the reactor listening"""
 
         self.reactor.listenUDP(self.listenPort, self.udp_factory)
-        self.tcp_factory.stopListening()
+        # self.tcp_factory.stopListening()
         self.period_task.stop()
 
     def serverFound(self, address, port):

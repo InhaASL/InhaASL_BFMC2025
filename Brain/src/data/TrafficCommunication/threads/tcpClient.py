@@ -106,37 +106,8 @@ class SingleConnection(protocol.Protocol):
                     "z": float(da.get("z", 0.0)),
                     "quality": int(da.get("quality", 1))
                 }
-                #logger.info(f"Converting location data to traffic data: {traffic_data}") #확인완료. location으로 들어옴
-                try:
-                    # TrafficData 큐에 직접 전송
-                    message = {
-                        "Owner": "TrafficCommunication",
-                        "msgID": "TrafficData",
-                        "msgType": "dict",
-                        "msgValue": traffic_data
-                    }
-                    #logger.info(f"Sending message to TrafficData queue: {message}")
-                    self.factory.queue["TrafficData"].put(message)
-                    #logger.info("Traffic data successfully sent to TrafficData queue") #확인완료 
-                except Exception as e:
-                    logger.error(f"Error sending traffic data: {str(e)}")
-                    logger.error("Stack trace:", exc_info=True)
-            elif da["type"] == "traffic":
-                logger.info(f"Sending traffic data: {da}")
-                try:
-                    # TrafficData 큐에 직접 전송
-                    message = {
-                        "Owner": "TrafficCommunication",
-                        "msgID": "TrafficData",
-                        "msgType": "dict",
-                        "msgValue": da
-                    }
-                    #logger.info(f"Sending message to TrafficData queue: {message}")
-                    self.factory.queue["TrafficData"].put(message)
-                    #logger.info("Traffic data successfully sent to TrafficData queue")
-                except Exception as e:
-                    logger.error(f"Error sending traffic data: {str(e)}")
-                    logger.error("Stack trace:", exc_info=True)
+                logger.info(f"Converting location data to traffic data: {traffic_data}")
+                
             else:
                 logger.warning(f"Received unknown message type: {da['type']}")
         except Exception as e:
