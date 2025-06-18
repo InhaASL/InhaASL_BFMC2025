@@ -43,7 +43,7 @@ class processSemaphores(WorkerProcess):
     """
 
     # ====================================== INIT ==========================================
-    def __init__(self, queueList, logging, debugging = True):
+    def __init__(self, queueList, logging, debugging = False):
         self.queuesList = queueList
         self.logging = logging
         self.debugging = debugging
@@ -76,13 +76,6 @@ class processSemaphores(WorkerProcess):
 
 if __name__ == "__main__":
     from multiprocessing import Queue
-    import logging #테스트 우해서 추가
-
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-    )
-    logger = logging.getLogger("Semaphores")
 
     queueList = {
         "Critical": Queue(),  # Queue for critical messages
@@ -92,14 +85,11 @@ if __name__ == "__main__":
     }
 
     allProcesses = list()
-    process = processSemaphores(queueList,logger)
+    process = processSemaphores(queueList)
     process.start()
 
-
-    print("통신 체크 1")
     x = range(6)
     for n in x:
-        print(queueList["General"].get())  # Print general messages  #제대로 받아오면, 이 메세지가 출력이 되어야 함. 
+        print(queueList["General"].get())  # Print general messages
 
-    print("통신체크 222")
     process.stop()

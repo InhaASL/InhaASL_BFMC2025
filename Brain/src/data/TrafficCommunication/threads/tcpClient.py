@@ -80,7 +80,7 @@ class tcpClient(protocol.ClientFactory):
         conn.factory = self
         return conn
 
-    def send_data_to_server(self, message):
+    def send_data_to_server(self, message): # 서버로 데이터를 보내는 부분 
         self.connection.send_data(message)
 
 

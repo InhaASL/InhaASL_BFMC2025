@@ -29,7 +29,9 @@
 from src.templates.threadwithstop import ThreadWithStop
 from twisted.internet import reactor
 from src.data.Semaphores.threads.udpListener import udpListener
-import logging
+
+import rospy
+from std_msgs.msg import String
 
 
 class threadSemaphores(ThreadWithStop):
@@ -47,20 +49,17 @@ class threadSemaphores(ThreadWithStop):
         self.queueList = queueList
         self.logger = logger
         self.debugging = debugging
-        try: # 에러처리 추가 
-            self.udp_factory = udpListener(self.queueList, self.logger, self.debugging)
-            self.reactor = reactor
-            self.reactor.listenUDP(self.listenPort, self.udp_factory)
-        except Exception as e:
-            self.logger.error(f"UDP 초기화 실패: {str(e)}")
-            raise
+        self.udp_factory = udpListener(self.queueList, self.logger, self.debugging)
+        self.reactor = reactor
+        self.reactor.listenUDP(self.listenPort, self.udp_factory)
 
+
+    
     # ======================================= RUN ==========================================
     def run(self):
         """
         Run the thread.
         """
-        self.logger.info("threadSemaphore 시작했음 (debug=%s)",self.debugging)
         self.reactor.run(installSignalHandlers=False)
 
     # ====================================== STOP ==========================================
