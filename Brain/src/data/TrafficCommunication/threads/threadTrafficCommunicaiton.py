@@ -48,8 +48,6 @@ class threadTrafficCommunication(ThreadWithStop):
     def __init__(self, shrd_mem, queueslist, deviceID, frequency, decrypt_key):
         super(threadTrafficCommunication, self).__init__()
         self.listenPort = 9000
-        # self.listenPort = 5000
-
         self.queue = queueslist
 
         self.tcp_factory = tcpClient(self.serverLost, deviceID, frequency, self.queue) # Handles the connection with the server
@@ -66,7 +64,7 @@ class threadTrafficCommunication(ThreadWithStop):
         """If the server disconnects, we stop the factory listening and start the reactor listening"""
 
         self.reactor.listenUDP(self.listenPort, self.udp_factory)
-        # self.tcp_factory.stopListening()
+        self.tcp_factory.stopListening()
         self.period_task.stop()
 
     def serverFound(self, address, port):
@@ -80,7 +78,6 @@ class threadTrafficCommunication(ThreadWithStop):
 
     # ======================================= RUN ==========================================
     def run(self):
-        
         self.reactor.run(installSignalHandlers=False)
 
     # ====================================== STOP ==========================================

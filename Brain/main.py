@@ -79,26 +79,7 @@ queueList = {
     "Config": Queue(),
     "TrafficData": Queue(),  # TrafficData 큐 추가
 }
-logging = logging.getLogger()
-
-# # ROS 노드 초기화
-# rospy.init_node('main_node', anonymous=True)
-# # ROS 퍼블리셔 생성
-# pub = rospy.Publisher('your_topic_name', String, queue_size=10)
-
-# # 메시지 발행 함수
-# def publish_message():
-#     msg = String()
-#     msg.data = "Hello from main.py!"
-#     pub.publish(msg)
-#     # rospy.loginfo("Published: %s", msg.data)  #디버깅용 
-
-# # 지속적인 메시지 발행을 위한 함수
-# def continuous_publish():
-#     rate = rospy.Rate(10)  # 10Hz로 메시지 발행
-#     while not rospy.is_shutdown():
-#         publish_message()
-#         rate.sleep()
+logger = logging.getLogger()
 
 Dashboard = False
 Camera = False
@@ -114,7 +95,7 @@ RosBridge = True
 # ===================================== SETUP PROCESSES ==================================
 
 # Initializing gateway
-processGateway = processGateway(queueList, logging)
+processGateway = processGateway(queueList, logger)
 processGateway.start()
 
 # Ip replacement
@@ -125,7 +106,7 @@ IpChanger.replace_ip_in_file()
 
 # Initializing dashboard
 if Dashboard:
-    processDashboard = processDashboard( queueList, logging, debugging = False)
+    processDashboard = processDashboard( queueList, logger, debugging = False)
     allProcesses.append(processDashboard)
 
 # Initializing camera
@@ -135,22 +116,22 @@ if Dashboard:
 
 # Initializing semaphores
 if Semaphores:
-    processSemaphores = processSemaphores(queueList, logging, debugging = False)
+    processSemaphores = processSemaphores(queueList, logger, debugging = False)
     allProcesses.append(processSemaphores)
 
 # Initializing GPS
 if TrafficCommunication:
-    processTrafficCommunication = processTrafficCommunication(queueList, logging, 3, debugging = True)
+    processTrafficCommunication = processTrafficCommunication(queueList, logger, 3, debugging = True)
     allProcesses.append(processTrafficCommunication)
 
 # Initializing serial connection NUCLEO - > PI
 if SerialHandler:
-    processSerialHandler = processSerialHandler(queueList, logging, debugging = False)
+    processSerialHandler = processSerialHandler(queueList, logger, debugging = False)
     allProcesses.append(processSerialHandler)
 
 # ------ New component runs starts here ------#
 if RosBridge:
-    processRosBridge = processRosBridge(queueList, logging, debugging = False)
+    processRosBridge = processRosBridge(queueList, logger, debugging = False)
     allProcesses.append(processRosBridge)
 # ------ New component runs ends here ------#
 
@@ -231,3 +212,5 @@ except KeyboardInterrupt:
     
     print("모든 프로세스가 종료되었습니다.")
     
+
+    #모든 프로세스가 STOP 메서드 가지는지 확인하기 

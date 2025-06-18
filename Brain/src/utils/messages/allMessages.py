@@ -265,8 +265,8 @@ class ROSKlem(Enum):
     msgType = "str"
 ### It will have this format: {"WarningName":"name1", "WarningID": 1}
 
-class TrafficData(Enum):
-    Queue = "TrafficData"
-    Owner = "threadTrafficCommunication"
-    msgID = 1
-    msgType = "dict"
+# class TrafficData(Enum):
+#     Queue = "TrafficData"
+#     Owner = "threadTrafficCommunication"
+#     msgID = 1
+#     msgType = "dict"

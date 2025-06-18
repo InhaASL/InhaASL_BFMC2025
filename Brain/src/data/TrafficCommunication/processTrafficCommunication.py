@@ -37,11 +37,6 @@ from src.templates.workerprocess import WorkerProcess
 from src.data.TrafficCommunication.threads.threadTrafficCommunicaiton import (
     threadTrafficCommunication,
 )
-from src.utils.messages.messageHandlerSender import messageHandlerSender
-from src.utils.messages.allMessages import TrafficData
-
-
-import rospy
 class processTrafficCommunication(WorkerProcess):
     """This process receives the location of the car and sends it to the processGateway.
     
@@ -57,9 +52,7 @@ class processTrafficCommunication(WorkerProcess):
         self.queuesList = queueList
         self.logging = logging
         self.shared_memory = sharedMem()
-        self.filename = "src/data/TrafficCommunication/useful/publickey_server_test.pem" #테스트용, 실제 대회에서는 test를 제거 
-        # self.filename = "src/data/TrafficCommunication/useful/privatekey_server_test.pem"
-
+        self.filename = "src/data/TrafficCommunication/useful/publickey_server_test.pem"
         self.deviceID = deviceID
         self.frequency = frequency
         self.debugging = debugging
@@ -77,58 +70,7 @@ class processTrafficCommunication(WorkerProcess):
     # ===================================== RUN ==========================================
     def run(self):
         """Apply the initializing methods and start the threads."""
-        try:
-            if self.debugging:
-                self.logging.info("Traffic Communication 프로세스 시작")
-                self.logging.info(f"Device ID: {self.deviceID}")
-                self.logging.info(f"Frequency: {self.frequency}")
-                self.logging.info(f"Key file: {self.filename}")
 
-            # 실제 데이터를 받아오는 부분
-            device_pos = self.shared_memory.get()
-            if self.debugging:
-                self.logging.info(f"Received device position: {device_pos}")
-
-            # device_pos가 리스트인 경우 처리
-            if isinstance(device_pos, list) and len(device_pos) >= 2:
-                x, y = device_pos[0], device_pos[1]
-            else:
-                x, y = 0.0, 0.0
-
-            traffic_data = {
-                "type": "traffic",
-                "x": x,
-                "y": y,
-                "z": 0.0,
-                "quality": 1
-            }
-
-            if self.debugging:
-                self.logging.info(f"Preparing to send traffic data: {traffic_data}")
-
-            # TrafficData 메시지로 전송
-            self.queuesList["TrafficData"].put({
-                "Owner": "TrafficCommunication",
-                "msgID": "TrafficData",
-                "msgType": "dict",
-                "msgValue": traffic_data
-            })
-
-            if self.debugging:
-                self.logging.info("Traffic data sent to TrafficData queue")
-
-            # General 큐에도 전송 (기존 방식 유지)
-            sender = messageHandlerSender(self.queuesList, TrafficData)
-            sender.send(traffic_data)
-
-            if self.debugging:
-                self.logging.info("Traffic data sent via messageHandlerSender")
-
-        except Exception as e:
-            if self.debugging:
-                self.logging.error(f"Error sending traffic data: {str(e)}")
-                self.logging.error(f"Stack trace:", exc_info=True)
-        
         super(processTrafficCommunication, self).run()
 
     # ===================================== INIT TH ======================================
@@ -145,17 +87,12 @@ class processTrafficCommunication(WorkerProcess):
 #             ++    THIS WILL RUN ONLY IF YOU RUN THE CODE FROM HERE  ++
 #                  in terminal:    python3 processTrafficCommunication.py
 
-if __name__ == "__main__": # 이 파일을 직접 실행할때만 작동, 아니라면 main.py 클래스만 불러와짐 
+if __name__ == "__main__":
     from multiprocessing import Queue
     import time
-    import logging
 
     shared_memory = sharedMem()
     locsysReceivePipe, locsysSendPipe = Pipe(duplex=False)
-
-
-    # logging.basicConfig(level=logging.DEBUG,format = "%(asctime)s [%(levelname)s] %(name)s : %(message)s")
-    # logger = logging.getLogger("TrafficComm")
     queueList = {
         "Critical": Queue(),
         "Warning": Queue(),
@@ -166,12 +103,9 @@ if __name__ == "__main__": # 이 파일을 직접 실행할때만 작동, 아니
     filename = "useful/publickey_server_test.pem"
     deviceID = 3
     frequency = 0.4
-    # frequency = 1.0
     traffic_communication = threadTrafficCommunication(
         shared_memory, queueList, deviceID, frequency, filename
     )
-
-
     traffic_communication.start()    
 
     start_time = time.time()
