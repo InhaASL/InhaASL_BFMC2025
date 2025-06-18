@@ -49,9 +49,7 @@ class threadRosBridgeRead(ThreadWithStop):
         self.imu_pub = rospy.Publisher('/imu', Imu, queue_size=10)
         self.speed_pub = rospy.Publisher('/current_speed', AckermannDriveStamped, queue_size=10)
         # self.traffic_pub = rospy.Publisher('/traffic_data', Float64MultiArray, queue_size=10)
-        self.semaphores_pub = rospy.Publisher('/semaphores_data', String, queue_size=10)
         self.cars_pub = rospy.Publisher('/cars_data', String, queue_size=10)
-        self.location_pub  = rospy.Publisher("/location_data", Float64MultiArray, queue_size=10)  ### CHANGED
 
         # 디버깅 true일때 디버깅 메세지 출력 
         if self.debugging:
@@ -88,7 +86,6 @@ class threadRosBridgeRead(ThreadWithStop):
                             float(loc["z"]),
                             float(loc.get("quality", 1)),
                         ]
-                        self.location_pub.publish(msg)
                         if self.debugging:
                             self.logging.info(f"/location_data {msg.data}")
 
@@ -155,7 +152,6 @@ class threadRosBridgeRead(ThreadWithStop):
                         try:
                             semaphores_msg = String()
                             semaphores_msg.data = json.dumps(semaphoresData)
-                            self.semaphores_pub.publish(semaphores_msg)
                             if self.debugging:
                                 self.logging.info("Published semaphores data")
                         except Exception as e:
@@ -206,7 +202,6 @@ class threadRosBridgeRead(ThreadWithStop):
         # ROS 퍼블리셔 정리
         self.imu_pub.unregister()
         self.speed_pub.unregister()
-        self.semaphores_pub.unregister()
         self.cars_pub.unregister()
         super().stop()
 
