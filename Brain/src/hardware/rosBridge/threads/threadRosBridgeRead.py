@@ -3,7 +3,7 @@
 import rospy
 from sensor_msgs.msg import Imu
 from ackermann_msgs.msg import AckermannDriveStamped
-from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import Float64MultiArray , String
 import tf
 import ast
 import math
@@ -21,15 +21,13 @@ from src.utils.messages.allMessages import (
     WarningSignal,
     Semaphores,
     Location,
-    TrafficData
 )
 
 from src.utils.messages.messageHandlerSubscriber import messageHandlerSubscriber
-from std_msgs.msg import String
 import time
-from src.utils.messages.allMessages import TrafficData
 
 class threadRosBridgeRead(ThreadWithStop):
+    """Gateway → ROS 퍼블리셔 스레드."""
     """This thread read data from SerialHandler and publish them to ROS topic .
     Args:
         queueList (dictionary of multiprocessing.queues.Queue): Dictionary of queues where the ID is the type of messages.
@@ -47,117 +45,91 @@ class threadRosBridgeRead(ThreadWithStop):
         self.logging = logging
         self.debugging = debugging
 
-        # ROS 퍼블리셔 초기화
+        # ───── ROS Publishers ─────초기화
         self.imu_pub = rospy.Publisher('/imu', Imu, queue_size=10)
         self.speed_pub = rospy.Publisher('/current_speed', AckermannDriveStamped, queue_size=10)
-        self.traffic_pub = rospy.Publisher('/traffic_data', Float64MultiArray, queue_size=10)
-        self.semaphores_pub = rospy.Publisher('/semaphores_data', String, queue_size=10)
+        # self.traffic_pub = rospy.Publisher('/traffic_data', Float64MultiArray, queue_size=10)
         self.cars_pub = rospy.Publisher('/cars_data', String, queue_size=10)
 
+        # 디버깅 true일때 디버깅 메세지 출력 
         if self.debugging:
             self.logging.info("ROS 퍼블리셔가 초기화되었습니다.")
-            self.logging.info(f"TrafficData 퍼블리셔 상태: {self.traffic_pub.get_num_connections()} subscribers")
+
+        # ───── Gateway Subscribers ────초기화
+        self.subscribe()
 
         # 메시지 객체 초기화
         self.drive_msg = AckermannDriveStamped()
         self.current_speed = 0
         self.current_steer = 0
         
-        # 구독자 초기화
-        self.subscribe()
-        
         # 발행 주기 설정 (30Hz)
-        self.rate = rospy.Rate(60)
-        
+        self.rate = rospy.Rate(30)
         super(threadRosBridgeRead, self).__init__()
 
+    # ──────────────────────────────────────────────────────────
     def run(self):
         try:
-            if self.debugging:
+            if self.debugging: # 디버깅 메시지
                 self.logging.info("threadRosBridgeRead 스레드가 시작되었습니다.")
                 self.logging.info("ROS 노드 상태: " + ("초기화됨" if rospy.core.is_initialized() else "초기화되지 않음"))
-                self.logging.info(f"TrafficData 퍼블리셔 상태: {self.traffic_pub.get_num_connections()} subscribers")
 
             while self._running and not rospy.is_shutdown():
                 try:
-                    # Traffic 데이터 처리
-                    if self.debugging:
-                        self.logging.info("[Traffic] Checking for new traffic data...")
-                        self.logging.info(f"[Traffic] Queue size: {self.queuesList['TrafficData'].qsize() if hasattr(self.queuesList['TrafficData'], 'qsize') else 'unknown'}")
-                    
-                    # 큐에서 직접 데이터 확인
-                    if not self.queuesList["TrafficData"].empty():
-                        message = self.queuesList["TrafficData"].get()
+                    # 1) Location 처리 --------------------------------------------
+                    loc = self.locationSubscriber.receive()                    
+                    if loc and self._validate_location(loc):    # 이게 안 됐을때 방어 필요 
+                        msg = Float64MultiArray()
+                        msg.data = [
+                            float(loc["x"]),
+                            float(loc["y"]),
+                            float(loc["z"]),
+                            float(loc.get("quality", 1)),
+                        ]
                         if self.debugging:
-                            self.logging.info(f"[Traffic] Raw message from queue: {message}")
+                            self.logging.info(f"/location_data {msg.data}")
+
+                        # rospy.loginfo(f"Published location data: {msg.data}") #이게 한번만 publish되고 잇음
                         
-                        if message and "msgValue" in message:
-                            traffic_data = message["msgValue"]
-                            if self.debugging:
-                                self.logging.info(f"[Traffic] Extracted traffic data: {traffic_data}")
-                            
-                            try:
-                                # 데이터 검증
-                                if self.validate_traffic_data(traffic_data):
-                                    # Float64MultiArray 메시지 생성
-                                    traffic_msg = Float64MultiArray()
-                                    traffic_msg.data = [
-                                        float(traffic_data["x"]),
-                                        float(traffic_data["y"]),
-                                        float(traffic_data["z"]),
-                                        float(traffic_data["quality"])
-                                    ]
-                                    
-                                    # ROS 토픽 발행
-                                    self.traffic_pub.publish(traffic_msg)
-                                    rospy.loginfo(f"Published traffic data: {traffic_msg.data}") #이게 한번만 publish되고 잇음
-                                    
-                                    if self.debugging:
-                                        self.logging.info(f"[Traffic] Published to ROS topic /traffic_data: {traffic_msg.data}")
-                                        self.logging.info(f"[Traffic] Publisher status: {self.traffic_pub.get_num_connections()} subscribers")
-                                else:
-                                    self.logging.warning(f"[Traffic] Invalid data format: {traffic_data}")
-                            except Exception as e:
-                                self.logging.error(f"[Traffic] Processing error: {str(e)}")
-                                self.logging.error(f"[Traffic] Problematic data: {traffic_data}")
-                                self.logging.error("Stack trace:", exc_info=True)
-                    elif self.debugging:
-                        self.logging.info("[Traffic] No traffic data in queue")
+                        if self.debugging:
+                            self.logging.info(f"[location] Published to ROS topic /traffic_data: {msg.data}")
+                    
+                                
 
-                    # IMU 데이터 처리
-                    imuData = self.imuDataSubscriber.receive()
-                    if imuData is not None:
-                        try:
-                            imuData = ast.literal_eval(imuData)
-                            roll = float(imuData["roll"])
-                            pitch = float(imuData["pitch"])
-                            yaw = float(imuData["yaw"])
-                            accelx = float(imuData["accelx"])
-                            accely = float(imuData["accely"])
-                            accelz = float(imuData["accelz"])
+                    # 2) IMU -----------------------------------------------------
+                    # imuData = self.imuDataSubscriber.receive()
+                    # if imuData is not None:
+                    #     try:
+                    #         imuData = ast.literal_eval(imuData)
+                    #         roll = float(imuData["roll"])
+                    #         pitch = float(imuData["pitch"])
+                    #         yaw = float(imuData["yaw"])
+                    #         accelx = float(imuData["accelx"])
+                    #         accely = float(imuData["accely"])
+                    #         accelz = float(imuData["accelz"])
 
-                            quaternion = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
+                    #         quaternion = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
 
-                            imu_msg = Imu()
-                            imu_msg.header.stamp = rospy.Time.now()
-                            imu_msg.header.frame_id = 'imu_link'
+                    #         imu_msg = Imu()
+                    #         imu_msg.header.stamp = rospy.Time.now()
+                    #         imu_msg.header.frame_id = 'imu_link'
 
-                            imu_msg.orientation.x = quaternion[0]
-                            imu_msg.orientation.y = quaternion[1]
-                            imu_msg.orientation.z = quaternion[2]
-                            imu_msg.orientation.w = quaternion[3]
+                    #         imu_msg.orientation.x = quaternion[0]
+                    #         imu_msg.orientation.y = quaternion[1]
+                    #         imu_msg.orientation.z = quaternion[2]
+                    #         imu_msg.orientation.w = quaternion[3]
 
-                            imu_msg.linear_acceleration.x = accelx
-                            imu_msg.linear_acceleration.y = accely
-                            imu_msg.linear_acceleration.z = accelz
+                    #         imu_msg.linear_acceleration.x = accelx
+                    #         imu_msg.linear_acceleration.y = accely
+                    #         imu_msg.linear_acceleration.z = accelz
 
-                            self.imu_pub.publish(imu_msg)
-                            if self.debugging:
-                                self.logging.info("Published IMU data")
-                        except Exception as e:
-                            self.logging.error(f"IMU data processing error: {str(e)}")
+                    #         self.imu_pub.publish(imu_msg)
+                    #         if self.debugging:
+                    #             self.logging.info("Published IMU data")
+                    #     except Exception as e:
+                    #         self.logging.error(f"IMU data processing error: {str(e)}")
 
-                    # 속도 및 조향 데이터 처리
+                    # 3) 속도/조향 ------------------------------------------------
                     cur_speedData = self.currentSpeedSubscriber.receive()
                     if cur_speedData is not None:
                         self.current_speed = cur_speedData
@@ -174,13 +146,12 @@ class threadRosBridgeRead(ThreadWithStop):
                     if self.debugging:
                         self.logging.info("Published speed data")
 
-                    # Semaphores 데이터 처리
+                    # 4) 신호등 ---------------------------------------------------
                     semaphoresData = self.semaphoresSubscriber.receive()
                     if semaphoresData is not None:
                         try:
                             semaphores_msg = String()
                             semaphores_msg.data = json.dumps(semaphoresData)
-                            self.semaphores_pub.publish(semaphores_msg)
                             if self.debugging:
                                 self.logging.info("Published semaphores data")
                         except Exception as e:
@@ -189,9 +160,7 @@ class threadRosBridgeRead(ThreadWithStop):
                     self.rate.sleep()  # Semaphores 데이터 처리 후 sleep
 
                 except Exception as e:
-                    self.logging.error(f"Data processing error: {str(e)}")
-                    self.logging.error("Stack trace:", exc_info=True)
-                    continue
+                    self.logging.error(f"ROS loop error: {e}", exc_info=True)
 
         except Exception as e:
             self.logging.error(f"Thread execution error: {str(e)}")
@@ -201,7 +170,8 @@ class threadRosBridgeRead(ThreadWithStop):
             if not rospy.is_shutdown():
                 rospy.signal_shutdown('Thread stopped')
             self.stop()
-
+            
+    # ──────────────────────────────────────────────────────────
     def subscribe(self):
         """Subscribes to the messages you are interested in"""
 
@@ -216,55 +186,15 @@ class threadRosBridgeRead(ThreadWithStop):
         # self.warningSubscriber = messageHandlerSubscriber(self.queuesList, WarningSignal, "lastOnly", True)
         self.semaphoresSubscriber = messageHandlerSubscriber(self.queuesList, Semaphores, "lastOnly", True)
         self.locationSubscriber = messageHandlerSubscriber(self.queuesList, Location, "lastOnly", True)
-        self.trafficSubscriber = messageHandlerSubscriber(self.queuesList, TrafficData, "lastOnly", True)
+        # self.trafficSubscriber = messageHandlerSubscriber(self.queuesList, TrafficData, "lastOnly", True)
 
         if self.debugging:
             self.logging.info("모든 구독자가 초기화되었습니다.")
 
-    def validate_traffic_data(self, data):
-        """트래픽 데이터 검증"""
-        if not isinstance(data, dict):
-            self.logging.warning("Traffic data is not a dictionary")
-            return False
-        
-        # 서버에서 받은 데이터 형식에 맞게 수정
-        required_fields = ['type', 'x', 'y', 'z', 'quality']
-        if not all(field in data for field in required_fields):
-            self.logging.warning(f"Missing required fields in traffic data. Required: {required_fields}, Got: {list(data.keys())}")
-            return False
-            
-        try:
-            # 데이터 타입 검증
-            if data['type'] != 'traffic':
-                self.logging.warning(f"Invalid message type: {data['type']}")
-                return False
-                
-            # 데이터 타입 변환 가능 여부 확인
-            float(data['x'])
-            float(data['y'])
-            float(data['z'])
-            int(data['quality'])
-            
-            if self.debugging:
-                self.logging.info(f"[Traffic] Data validation successful: {data}")
-            return True
-        except (ValueError, TypeError) as e:
-            self.logging.warning(f"Invalid data type in traffic data: {str(e)}")
-            return False
-
-    def validate_semaphores_data(self, data):
-        """신호등 데이터 검증"""
-        if not isinstance(data, dict):
-            return False
-        
-        if data.get("device") == "semaphore":
-            required_fields = ["id", "state", "x", "y"]
-        elif data.get("device") == "car":
-            required_fields = ["id", "x", "y"]
-        else:
-            return False
-        
-        return all(field in data for field in required_fields)
+    # ───── Helper: Location 검증 ─────
+    def _validate_location(self, d):
+        need = ("type", "x", "y", "z")
+        return all(k in d for k in need) and d["type"] == "location"
 
     def stop(self):
         """스레드를 안전하게 종료하고 ROS 리소스를 정리합니다."""
@@ -272,8 +202,6 @@ class threadRosBridgeRead(ThreadWithStop):
         # ROS 퍼블리셔 정리
         self.imu_pub.unregister()
         self.speed_pub.unregister()
-        self.traffic_pub.unregister()
-        self.semaphores_pub.unregister()
         self.cars_pub.unregister()
         super().stop()
 

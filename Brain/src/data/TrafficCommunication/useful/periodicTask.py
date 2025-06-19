@@ -45,6 +45,6 @@ class periodicTask(task.LoopingCall):
         """
         Perform the periodic check and send data to the server.
         """
-        tosend = self.shrd_mem.get()
+        tosend = self.shrd_mem.get() #shared mem거를 전송.
         for mem in tosend:
             self.tcp_factory.send_data_to_server(mem)

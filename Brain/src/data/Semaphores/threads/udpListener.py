@@ -31,6 +31,9 @@ from src.utils.messages.allMessages import Semaphores
 from twisted.internet import protocol
 from src.utils.messages.messageHandlerSender import messageHandlerSender
 
+import rospy
+from std_msgs.msg import String
+
 class udpListener(protocol.DatagramProtocol):
     """This class is used to receive the information from the servers.
 
@@ -42,6 +45,10 @@ class udpListener(protocol.DatagramProtocol):
         self.semaphoresSender = messageHandlerSender(queuesList, Semaphores)
         self.logger = logger
         self.debugging = debugging
+
+        self.pub = rospy.Publisher('/semaphore_info', String, queue_size=10)
+        if not rospy.core.is_initialized():
+            rospy.init_node('udp_listener_node', anonymous=True)
 
     def datagramReceived(self, datagram, addr):
         """Specific function for receiving the information. It will select and create different dictionary for each type of data we receive(car or semaphore)
@@ -86,6 +93,7 @@ class udpListener(protocol.DatagramProtocol):
             if self.debugging:
                 self.logger.info(f"Received data: {tmp}")
             self.semaphoresSender.send(tmp)
+            self.pub.publish(json.dumps(tmp)) # 로스토픽 
         except json.JSONDecodeError:
             self.logger.error("JSON 파싱 실패")
         except Exception as e:
