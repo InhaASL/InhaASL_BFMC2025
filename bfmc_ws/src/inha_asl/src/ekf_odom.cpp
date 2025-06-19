@@ -1,12 +1,15 @@
 #include <ros/ros.h>
 #include <nav_msgs/Odometry.h>
-#include <sensor_msgs/Imu.h>
 #include <geometry_msgs/Pose2D.h>
+#include <sensor_msgs/Imu.h>
 #include <tf/transform_broadcaster.h>
 #include <ackermann_msgs/AckermannDriveStamped.h>
+#include <random>
+#include <mutex>
 #include <Eigen/Dense>
+#include <vector>
 
-class EKFAckermannOdom
+class AckermannEKF
 {
 private:
     ros::NodeHandle nh_;
@@ -14,367 +17,474 @@ private:
     ros::Subscriber drive_sub_;
     ros::Subscriber imu_sub_;
     tf::TransformBroadcaster tf_broadcaster_;
+    ros::Timer publish_timer_;
 
-    // EKF 상태 벡터 [x, y, theta, v, omega]
-    Eigen::VectorXd state_;           // 상태 벡터 (5x1)
-    Eigen::MatrixXd P_;              // 공분산 행렬 (5x5)
-    Eigen::MatrixXd Q_;              // 프로세스 노이즈 (5x5)
-    Eigen::MatrixXd R_ackermann_;    // Ackermann 관측 노이즈 (2x2)
-    Eigen::MatrixXd R_imu_;          // IMU 관측 노이즈 (1x1)
-
+    // EKF 상태 벡터 [x, y, theta, v, omega] (5차원으로 단순화)
+    Eigen::VectorXd state_;         // 5x1 상태 벡터
+    Eigen::MatrixXd covariance_;    // 5x5 공분산 행렬
+    
+    // 프로세스 및 관측 노이즈
+    Eigen::MatrixXd Q_;             // 5x5 프로세스 노이즈 공분산
+    Eigen::MatrixXd R_ackermann_;   // 2x2 Ackermann 관측 노이즈 공분산
+    Eigen::MatrixXd R_imu_;         // 1x1 IMU 관측 노이즈 공분산
+    
+    // 설정 파라미터들
     double wheel_base_;
     double driving_gain_, steering_gain_;
     bool use_tf_;
-    ros::Time last_time_;
-    bool initialized_;
-
-    // 토픽명들
-    std::string odom_topic_;
-    std::string drive_topic_;
-    std::string imu_topic_;
-    std::string odom_frame_;
-    std::string base_frame_;
-
-    // 공분산 행렬들을 직접 저장
+    double publish_rate_;
+    std::string odom_topic_, drive_topic_, imu_topic_;
+    std::string odom_frame_, base_frame_;
+    
+    // Preintegration 설정
+    double preint_accel_noise_std_;
+    double preint_gyro_noise_std_;
+    double preint_max_time_;
+    int preint_min_measurements_;
+    
+    // 시간 관리
+    ros::Time last_predict_time_;
+    ros::Time last_publish_time_;
+    
+    // 초기화 관련
+    bool ekf_initialized_;
+    std::mutex ekf_mutex_;
+    
+    // 주파수 추정
+    int imu_count_, ackermann_count_;
+    ros::Time freq_measure_start_;
 
 public:
-    EKFAckermannOdom() : initialized_(false)
+    AckermannEKF() : state_(5), covariance_(5, 5), Q_(5, 5), 
+                     R_ackermann_(2, 2), R_imu_(1, 1),
+                     ekf_initialized_(false)
     {
-        // 파라미터 로드
-        nh_.param("wheel_base", wheel_base_, 0.26);   
-        nh_.param("use_tf", use_tf_, true);          
-        nh_.param("drive_gain", driving_gain_, 9.05);
-        nh_.param("steering_gain", steering_gain_, 11.0);
+        // Config 파라미터 읽기
+        loadConfiguration();
         
-        // 토픽명 파라미터
+        // EKF 초기화
+        initializeEKF();
+        
+        // Publisher & Subscriber 설정
+        setupROS();
+        
+        // 시간 초기화
+        last_predict_time_ = ros::Time::now();
+        last_publish_time_ = ros::Time::now();
+        
+        // 주파수 측정 초기화
+        imu_count_ = ackermann_count_ = 0;
+        freq_measure_start_ = ros::Time::now();
+        
+        ROS_INFO("AckermannEKF 노드가 시작되었사옵니다.");
+        printConfiguration();
+    }
+    
+private:
+    void loadConfiguration()
+    {
+        // 기본 파라미터
+        nh_.param("wheel_base", wheel_base_, 0.26);
+        nh_.param("use_tf", use_tf_, true);
+        
+        // 토픽 및 프레임 설정
         nh_.param<std::string>("odom_topic", odom_topic_, "odom");
         nh_.param<std::string>("drive_topic", drive_topic_, "current_speed");
         nh_.param<std::string>("imu_topic", imu_topic_, "/d455/imu");
         nh_.param<std::string>("odom_frame", odom_frame_, "odom");
         nh_.param<std::string>("base_frame", base_frame_, "base_link");
+        nh_.param("publish_rate", publish_rate_, 30.0);
         
-        // 공분산 행렬들을 config에서 로드
-        loadCovarianceMatrices();
-
-        // ROS 통신 설정
-        odom_pub_ = nh_.advertise<nav_msgs::Odometry>(odom_topic_, 50);
-        drive_sub_ = nh_.subscribe(drive_topic_, 10, &EKFAckermannOdom::driveCallback, this);
-        imu_sub_ = nh_.subscribe(imu_topic_, 10, &EKFAckermannOdom::imuCallback, this);
-
-        // EKF 초기화
-        initializeEKF();
+        // Preintegration 설정
+        nh_.param("preint_accel_noise_std", preint_accel_noise_std_, 0.2);
+        nh_.param("preint_gyro_noise_std", preint_gyro_noise_std_, 0.1);
+        nh_.param("preint_max_time", preint_max_time_, 0.5);
+        nh_.param("preint_min_measurements", preint_min_measurements_, 5);
         
-        last_time_ = ros::Time::now();
-    }
-
-    void loadCovarianceMatrices()
-    {
-        // 프로세스 노이즈 행렬 Q (5x5)
+        // 센서 캘리브레이션 gain
+        nh_.param("drive_gain", driving_gain_, 9.05);
+        nh_.param("steering_gain", steering_gain_, 11.0);
+        
+        // 프로세스 노이즈 공분산 행렬 Q (5x5)
         std::vector<double> process_cov;
-        if (nh_.getParam("process_covariance", process_cov) && process_cov.size() == 25)
-        {
-            for (int i = 0; i < 5; i++)
-            {
-                for (int j = 0; j < 5; j++)
-                {
-                    Q_(i, j) = process_cov[i * 5 + j];
-                }
-            }
+        if (nh_.getParam("process_covariance", process_cov) && process_cov.size() == 25) {
+            Q_ = Eigen::Map<Eigen::MatrixXd>(process_cov.data(), 5, 5).transpose();
+        } else {
+            ROS_WARN("process_covariance 파라미터를 찾을 수 없거나 크기가 잘못되었습니다. 기본값을 사용합니다.");
+            Q_ = Eigen::MatrixXd::Identity(5, 5) * 0.1;
         }
-        else
-        {
-            // 기본값 설정
-            Q_ = Eigen::MatrixXd::Zero(5, 5);
-            Q_(0, 0) = 0.1;   // x 위치
-            Q_(1, 1) = 0.1;   // y 위치
-            Q_(2, 2) = 0.1;   // theta 각도
-            Q_(3, 3) = 0.1;   // 선속도
-            Q_(4, 4) = 0.1;   // 각속도
-            ROS_WARN("Using default process covariance matrix");
-        }
-
-        // Ackermann 관측 노이즈 행렬 R (2x2)
+        
+        // Ackermann 관측 노이즈 공분산 행렬 R (2x2)
         std::vector<double> ackermann_cov;
-        if (nh_.getParam("ackermann_covariance", ackermann_cov) && ackermann_cov.size() == 4)
-        {
-            for (int i = 0; i < 2; i++)
-            {
-                for (int j = 0; j < 2; j++)
-                {
-                    R_ackermann_(i, j) = ackermann_cov[i * 2 + j];
-                }
-            }
+        if (nh_.getParam("ackermann_covariance", ackermann_cov) && ackermann_cov.size() == 4) {
+            R_ackermann_ = Eigen::Map<Eigen::MatrixXd>(ackermann_cov.data(), 2, 2).transpose();
+        } else {
+            ROS_WARN("ackermann_covariance 파라미터를 찾을 수 없거나 크기가 잘못되었습니다. 기본값을 사용합니다.");
+            R_ackermann_ = Eigen::MatrixXd::Identity(2, 2) * 0.2;
         }
-        else
-        {
-            // 기본값 설정
-            R_ackermann_ = Eigen::MatrixXd::Zero(2, 2);
-            R_ackermann_(0, 0) = 0.2;   // 속도 노이즈
-            R_ackermann_(1, 1) = 0.2;   // 각속도 노이즈
-            ROS_WARN("Using default Ackermann covariance matrix");
-        }
-
-        // IMU 관측 노이즈 행렬 R (1x1)
+        
+        // IMU 관측 노이즈 공분산 행렬 R (1x1)
         std::vector<double> imu_cov;
-        if (nh_.getParam("imu_covariance", imu_cov) && imu_cov.size() == 1)
-        {
+        if (nh_.getParam("imu_covariance", imu_cov) && imu_cov.size() == 1) {
             R_imu_(0, 0) = imu_cov[0];
-        }
-        else
-        {
-            // 기본값 설정
+        } else {
+            ROS_WARN("imu_covariance 파라미터를 찾을 수 없거나 크기가 잘못되었습니다. 기본값을 사용합니다.");
             R_imu_(0, 0) = 0.05;
-            ROS_WARN("Using default IMU covariance matrix");
         }
-
-        // 초기 공분산 행렬 P (5x5)
+        
+        // 초기 상태 공분산 행렬 P (5x5)
         std::vector<double> initial_cov;
-        if (nh_.getParam("initial_covariance", initial_cov) && initial_cov.size() == 25)
-        {
-            for (int i = 0; i < 5; i++)
-            {
-                for (int j = 0; j < 5; j++)
-                {
-                    P_(i, j) = initial_cov[i * 5 + j];
-                }
-            }
+        if (nh_.getParam("initial_covariance", initial_cov) && initial_cov.size() == 25) {
+            covariance_ = Eigen::Map<Eigen::MatrixXd>(initial_cov.data(), 5, 5).transpose();
+        } else {
+            ROS_WARN("initial_covariance 파라미터를 찾을 수 없거나 크기가 잘못되었습니다. 기본값을 사용합니다.");
+            covariance_ = Eigen::MatrixXd::Identity(5, 5) * 1.0;
         }
-        else
-        {
-            // 기본값 설정
-            P_ = Eigen::MatrixXd::Identity(5, 5) * 1.0;
-            ROS_WARN("Using default initial covariance matrix");
-        }
-
-        // 로드된 행렬들을 출력
-        ROS_INFO("Process Covariance Matrix Q:");
-        std::cout << Q_ << std::endl;
-        ROS_INFO("Ackermann Observation Covariance Matrix R:");
-        std::cout << R_ackermann_ << std::endl;
-        ROS_INFO("IMU Observation Covariance Matrix R:");
-        std::cout << R_imu_ << std::endl;
-        ROS_INFO("Initial Covariance Matrix P:");
-        std::cout << P_ << std::endl;
     }
-
+    
+    void printConfiguration()
+    {
+        ROS_INFO("=== EKF Ackermann Odometry 설정 ===");
+        ROS_INFO("wheel_base: %.3f", wheel_base_);
+        ROS_INFO("drive_gain: %.2f, steering_gain: %.2f", driving_gain_, steering_gain_);
+        ROS_INFO("토픽 - odom: %s, drive: %s, imu: %s", 
+                 odom_topic_.c_str(), drive_topic_.c_str(), imu_topic_.c_str());
+        ROS_INFO("프레임 - odom: %s, base: %s", odom_frame_.c_str(), base_frame_.c_str());
+        ROS_INFO("발행 주파수: %.1f Hz", publish_rate_);
+        ROS_INFO("Preintegration - accel_noise: %.3f, gyro_noise: %.3f, max_time: %.3f", 
+                 preint_accel_noise_std_, preint_gyro_noise_std_, preint_max_time_);
+        ROS_INFO("=====================================");
+    }
+    
+    void setupROS()
+    {
+        // Publisher
+        odom_pub_ = nh_.advertise<nav_msgs::Odometry>(odom_topic_, 50);
+        
+        // Subscribers
+        drive_sub_ = nh_.subscribe(drive_topic_, 10, &AckermannEKF::driveCallback, this);
+        imu_sub_ = nh_.subscribe(imu_topic_, 100, &AckermannEKF::imuCallback, this);
+        
+        // Timer (optional)
+        if (publish_rate_ > 0.0) {
+            publish_timer_ = nh_.createTimer(ros::Duration(1.0 / publish_rate_), 
+                                           &AckermannEKF::publishTimerCallback, this);
+        }
+    }
+    
     void initializeEKF()
     {
-        // 상태 벡터 초기화 [x, y, theta, v, omega]
-        state_ = Eigen::VectorXd::Zero(5);
+        // 초기 상태 벡터 [x, y, theta, v, omega]
+        state_.setZero();
         
-        // 공분산 행렬들은 loadCovarianceMatrices()에서 설정됨
+        // 공분산 행렬은 config에서 로드됨
+        // Q_, R_ackermann_, R_imu_도 config에서 로드됨
+        
+        ROS_INFO("EKF 초기화 완료 - 상태 차원: %ld", state_.size());
     }
-
-    void predict(double dt)
+    
+    void predictStepIMU(double dt, const sensor_msgs::Imu::ConstPtr& msg)
     {
-        // 상태 전이 (gain으로 보정된 속도 사용)
+        if (dt <= 0.0 || dt > 0.1) return; // IMU 100Hz 기준
+        
+        // 현재 상태 추출
         double x = state_(0);
         double y = state_(1);
         double theta = state_(2);
-        double v = state_(3);        // 이미 gain으로 보정된 속도
-        double omega = state_(4);    // 이미 gain으로 보정된 각속도
-
-        // 예측 단계 - 보정된 속도로 적분
-        state_(0) = x + v * cos(theta) * dt;  // x
-        state_(1) = y + v * sin(theta) * dt;  // y
-        state_(2) = theta + omega * dt;       // theta
-        // state_(3) = v;                     // v (일정하다고 가정)
-        // state_(4) = omega;                 // omega (일정하다고 가정)
-
-        // 각도 정규화 (-π ~ π)
-        while (state_(2) > M_PI) state_(2) -= 2.0 * M_PI;
-        while (state_(2) < -M_PI) state_(2) += 2.0 * M_PI;
-
-        // 야코비안 행렬 계산
+        double v = state_(3);
+        double omega = state_(4);
+        
+        // IMU 데이터 (Body frame → World frame)
+        double cos_theta = cos(theta);
+        double sin_theta = sin(theta);
+        
+        double ax_body = msg->linear_acceleration.x;
+        double ay_body = msg->linear_acceleration.y;
+        double omega_z = msg->angular_velocity.z;
+        
+        double ax_world = cos_theta * ax_body - sin_theta * ay_body;
+        double ay_world = sin_theta * ax_body + cos_theta * ay_body;
+        
+        // IMU 기반 상태 예측 (상태 차원 5)
+        Eigen::VectorXd predicted_state(5);
+        predicted_state(0) = x + v * cos_theta * dt + 0.5 * ax_world * dt * dt;  // x
+        predicted_state(1) = y + v * sin_theta * dt + 0.5 * ay_world * dt * dt;  // y
+        predicted_state(2) = theta + omega_z * dt;                               // theta
+        predicted_state(3) = sqrt(ax_world*ax_world + ay_world*ay_world) * dt + v; // v (속도 크기)
+        predicted_state(4) = omega_z;                                            // omega
+        
+        // 야코비안 행렬 F (5x5)
         Eigen::MatrixXd F = Eigen::MatrixXd::Identity(5, 5);
-        F(0, 2) = -v * sin(theta) * dt;  // dx/dtheta
-        F(0, 3) = cos(theta) * dt;       // dx/dv
-        F(1, 2) = v * cos(theta) * dt;   // dy/dtheta
-        F(1, 3) = sin(theta) * dt;       // dy/dv
-        F(2, 4) = dt;                    // dtheta/domega
-
+        F(0, 2) = -v * sin_theta * dt;     // dx/dtheta
+        F(0, 3) = cos_theta * dt;          // dx/dv
+        
+        F(1, 2) = v * cos_theta * dt;      // dy/dtheta
+        F(1, 3) = sin_theta * dt;          // dy/dv
+        
+        F(2, 4) = dt;                      // dtheta/domega
+        
         // 공분산 예측
-        P_ = F * P_ * F.transpose() + Q_;
-    }
-
-    void updateAckermann(double v_measured, double omega_measured)
-    {
-        // 관측 벡터 [v, omega]
-        Eigen::VectorXd z(2);
-        z(0) = v_measured;
-        z(1) = omega_measured;
-
-        // 예측된 관측값
-        Eigen::VectorXd h(2);
-        h(0) = state_(3);  // 예측된 속도
-        h(1) = state_(4);  // 예측된 각속도
-
-        // 관측 야코비안 (속도와 각속도를 직접 관측)
-        Eigen::MatrixXd H = Eigen::MatrixXd::Zero(2, 5);
-        H(0, 3) = 1.0;  // v 관측
-        H(1, 4) = 1.0;  // omega 관측
-
-        // 칼만 이득 계산
-        Eigen::MatrixXd S = H * P_ * H.transpose() + R_ackermann_;
-        Eigen::MatrixXd K = P_ * H.transpose() * S.inverse();
-
-        // 상태 업데이트
-        Eigen::VectorXd innovation = z - h;
-        state_ = state_ + K * innovation;
-
-        // 공분산 업데이트
-        Eigen::MatrixXd I = Eigen::MatrixXd::Identity(5, 5);
-        P_ = (I - K * H) * P_;
-    }
-
-    void updateIMU(double omega_imu)
-    {
-        // 관측 벡터 [omega]
-        Eigen::VectorXd z(1);
-        z(0) = omega_imu;
-
-        // 예측된 관측값
-        Eigen::VectorXd h(1);
-        h(0) = state_(4);  // 예측된 각속도
-
-        // 관측 야코비안
-        Eigen::MatrixXd H = Eigen::MatrixXd::Zero(1, 5);
-        H(0, 4) = 1.0;  // omega 관측
-
-        // 칼만 이득 계산
-        Eigen::MatrixXd S = H * P_ * H.transpose() + R_imu_;
-        Eigen::MatrixXd K = P_ * H.transpose() * S.inverse();
-
-        // 상태 업데이트
-        Eigen::VectorXd innovation = z - h;
-        state_ = state_ + K * innovation;
-
-        // 공분산 업데이트
-        Eigen::MatrixXd I = Eigen::MatrixXd::Identity(5, 5);
-        P_ = (I - K * H) * P_;
-    }
-
-    void driveCallback(const ackermann_msgs::AckermannDriveStamped::ConstPtr& msg)
-    {
-        double v = msg->drive.speed;
-        double steering_angle = -msg->drive.steering_angle;
-
-        ros::Time current_time = ros::Time::now();
-        double dt = (current_time - last_time_).toSec();
+        covariance_ = F * covariance_ * F.transpose() + Q_ * dt;
         
-        if (dt <= 0) return;
+        // 상태 업데이트
+        state_ = predicted_state;
+        state_(2) = normalizeAngle(state_(2));
         
-        last_time_ = current_time;
-
-        // Ackermann 모델로부터 각속도 계산 (gain 적용)
+        ROS_DEBUG("IMU Process: dt=%.4f, ax=%.3f, ay=%.3f, ω=%.3f", 
+                  dt, ax_world, ay_world, omega_z);
+    }
+    
+    void updateAckermann(double v, double steering_angle)
+    {
+        // Ackermann 관측값 [v, omega]
         double omega_ackermann = (v / wheel_base_) * tan(steering_angle) / steering_gain_;
         double v_corrected = v / driving_gain_;
-
-        if (!initialized_)
-        {
-            state_(3) = v_corrected;
-            state_(4) = omega_ackermann;
-            initialized_ = true;
-            return;
-        }
-
-        // EKF 예측 단계 (보정된 값으로 예측)
-        predict(dt);
-
-        // Ackermann 관측으로 업데이트 (보정된 값 사용)
-        updateAckermann(v_corrected, omega_ackermann);
-
-        // 오도메트리 발행
-        publishOdometry(current_time);
+        
+        Eigen::VectorXd z_ackermann(2);
+        z_ackermann(0) = v_corrected;
+        z_ackermann(1) = omega_ackermann;
+        
+        // 예측된 관측값
+        Eigen::VectorXd h_pred(2);
+        h_pred(0) = state_(3);  // v
+        h_pred(1) = state_(4);  // omega
+        
+        // 관측 모델의 야코비안 행렬 H (2x5)
+        Eigen::MatrixXd H = Eigen::MatrixXd::Zero(2, 5);
+        H(0, 3) = 1.0;  // dv/dv
+        H(1, 4) = 1.0;  // domega/domega
+        
+        // 칼만 갱신
+        kalmanUpdate(z_ackermann, h_pred, H, R_ackermann_);
+        
+        ROS_DEBUG("Ackermann Correction: v=%.3f, ω=%.3f", v_corrected, omega_ackermann);
     }
-
+    
+    void updateIMU(const sensor_msgs::Imu::ConstPtr& msg)
+    {
+        // IMU 관측값 [omega_z]
+        double omega_z = msg->angular_velocity.z;
+        
+        Eigen::VectorXd z_imu(1);
+        z_imu(0) = omega_z;
+        
+        // 예측된 관측값
+        Eigen::VectorXd h_pred(1);
+        h_pred(0) = state_(4);  // omega
+        
+        // 관측 모델의 야코비안 행렬 H (1x5)
+        Eigen::MatrixXd H = Eigen::MatrixXd::Zero(1, 5);
+        H(0, 4) = 1.0;  // domega/domega
+        
+        // 칼만 갱신
+        kalmanUpdate(z_imu, h_pred, H, R_imu_);
+        
+        ROS_DEBUG("IMU Correction: ω=%.3f", omega_z);
+    }
+    
+    void kalmanUpdate(const Eigen::VectorXd& z, const Eigen::VectorXd& h_pred, 
+                     const Eigen::MatrixXd& H, const Eigen::MatrixXd& R)
+    {
+        // 혁신(innovation) 계산
+        Eigen::VectorXd y = z - h_pred;
+        
+        // 혁신 공분산 계산
+        Eigen::MatrixXd S = H * covariance_ * H.transpose() + R;
+        
+        // 칼만 게인 계산
+        Eigen::MatrixXd K = covariance_ * H.transpose() * S.inverse();
+        
+        // 상태 업데이트
+        state_ = state_ + K * y;
+        
+        // 공분산 업데이트 (Joseph form for numerical stability)
+        Eigen::MatrixXd I = Eigen::MatrixXd::Identity(5, 5);
+        Eigen::MatrixXd IKH = I - K * H;
+        covariance_ = IKH * covariance_ * IKH.transpose() + K * R * K.transpose();
+        
+        // 각도 정규화
+        state_(2) = normalizeAngle(state_(2));
+    }
+    
+    double normalizeAngle(double angle)
+    {
+        while (angle > M_PI) angle -= 2.0 * M_PI;
+        while (angle < -M_PI) angle += 2.0 * M_PI;
+        return angle;
+    }
+    
+    void updateFrequencyEstimates()
+    {
+        ros::Time now = ros::Time::now();
+        double elapsed = (now - freq_measure_start_).toSec();
+        
+        if (elapsed > 5.0) { // 5초간 측정
+            double imu_freq = imu_count_ / elapsed;
+            double ackermann_freq = ackermann_count_ / elapsed;
+            
+            ROS_INFO("센서 주파수 - IMU: %.1f Hz, Ackermann: %.1f Hz", imu_freq, ackermann_freq);
+            
+            // 카운터 리셋
+            imu_count_ = ackermann_count_ = 0;
+            freq_measure_start_ = now;
+        }
+    }
+    
+public:
     void imuCallback(const sensor_msgs::Imu::ConstPtr& msg)
     {
-        if (!initialized_) return;
-
-        // IMU 각속도 (z축)
-        double omega_imu = msg->angular_velocity.z;
-
-        // IMU 관측으로 업데이트
-        updateIMU(omega_imu);
+        std::lock_guard<std::mutex> lock(ekf_mutex_);
+        
+        // 주파수 측정
+        imu_count_++;
+        updateFrequencyEstimates();
+        
+        ros::Time current_time = msg->header.stamp;
+        if (current_time.isZero()) current_time = ros::Time::now();
+        
+        if (!ekf_initialized_) {
+            last_predict_time_ = current_time;
+            ekf_initialized_ = true;
+            return;
+        }
+        
+        double dt = (current_time - last_predict_time_).toSec();
+        
+        // IMU를 Process Model로 사용 (100Hz)
+        if (dt > 0.0) {
+            predictStepIMU(dt, msg);
+            last_predict_time_ = current_time;
+        }
+        
+        ROS_DEBUG("IMU Process: x=%.3f, y=%.3f, θ=%.3f", 
+                  state_(0), state_(1), state_(2));
     }
-
-    void publishOdometry(const ros::Time& current_time)
+    
+    void driveCallback(const ackermann_msgs::AckermannDriveStamped::ConstPtr& msg)
     {
-        geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(state_(2));
-
-        // TF 발행
-        if (use_tf_)
-        {
+        std::lock_guard<std::mutex> lock(ekf_mutex_);
+        
+        // 주파수 측정
+        ackermann_count_++;
+        updateFrequencyEstimates();
+        
+        double v = msg->drive.speed;
+        double steering_angle = -msg->drive.steering_angle;
+        
+        if (!ekf_initialized_) {
+            return; // IMU 초기화 대기
+        }
+        
+        // Ackermann을 Correction으로 사용 (10Hz)
+        updateAckermann(v, steering_angle);
+        
+        ROS_DEBUG("Ackermann Correction: v=%.3f, δ=%.3f", v, steering_angle);
+    }
+    
+    void publishTimerCallback(const ros::TimerEvent& event)
+    {
+        std::lock_guard<std::mutex> lock(ekf_mutex_);
+        publishOdometry();
+    }
+    
+    void publishOdometry()
+    {
+        if (!ekf_initialized_) return;
+        
+        ros::Time current_time = ros::Time::now();
+        
+        // 상태에서 값들 추출
+        double x = state_(0);
+        double y = state_(1);
+        double theta = state_(2);
+        double v = state_(3);
+        double omega = state_(4);
+        
+        // 속도를 body frame으로 변환
+        double vx = v * cos(theta);
+        double vy = v * sin(theta);
+        
+        // 쿼터니언 생성
+        geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(theta);
+        
+        // TF 브로드캐스트
+        if (use_tf_) {
             geometry_msgs::TransformStamped odom_tf;
             odom_tf.header.stamp = current_time;
             odom_tf.header.frame_id = odom_frame_;
             odom_tf.child_frame_id = base_frame_;
-            odom_tf.transform.translation.x = state_(0);
-            odom_tf.transform.translation.y = state_(1);
+            odom_tf.transform.translation.x = x;
+            odom_tf.transform.translation.y = y;
             odom_tf.transform.translation.z = 0.0;
             odom_tf.transform.rotation = odom_quat;
             tf_broadcaster_.sendTransform(odom_tf);
         }
-
-        // 오도메트리 메시지 발행
+        
+        // 오도메트리 메시지 생성
         nav_msgs::Odometry odom;
         odom.header.stamp = current_time;
         odom.header.frame_id = odom_frame_;
         odom.child_frame_id = base_frame_;
-
-        odom.pose.pose.position.x = state_(0);
-        odom.pose.pose.position.y = state_(1);
+        
+        // 위치 및 자세
+        odom.pose.pose.position.x = x;
+        odom.pose.pose.position.y = y;
         odom.pose.pose.position.z = 0.0;
         odom.pose.pose.orientation = odom_quat;
-
-        // 공분산 설정
-        for (int i = 0; i < 6; i++)
-        {
-            for (int j = 0; j < 6; j++)
-            {
-                if (i < 3 && j < 3)
-                {
-                    // 위치와 회전에 대한 공분산
-                    if (i == 2 && j == 2)
-                        odom.pose.covariance[i * 6 + j] = P_(2, 2);  // theta
-                    else if (i < 2 && j < 2)
-                        odom.pose.covariance[i * 6 + j] = P_(i, j);  // x, y
-                    else
-                        odom.pose.covariance[i * 6 + j] = 0.0;
-                }
-                else
-                {
-                    odom.pose.covariance[i * 6 + j] = 0.0;
-                }
-            }
+        
+        // 속도 정보
+        odom.twist.twist.linear.x = vx;
+        odom.twist.twist.linear.y = vy;
+        odom.twist.twist.angular.z = omega;
+        
+        // 공분산 정보 (EKF 공분산 행렬에서 추출)
+        for (int i = 0; i < 36; i++) {
+            odom.pose.covariance[i] = 0.0;
+            odom.twist.covariance[i] = 0.0;
         }
-
-        odom.twist.twist.linear.x = state_(3);  // 이미 gain으로 보정된 속도
-        odom.twist.twist.angular.z = state_(4);
-
-        // 속도 공분산 설정
-        for (int i = 0; i < 6; i++)
-        {
-            for (int j = 0; j < 6; j++)
-            {
-                if (i == 0 && j == 0)
-                    odom.twist.covariance[i * 6 + j] = P_(3, 3);  // 선속도
-                else if (i == 5 && j == 5)
-                    odom.twist.covariance[i * 6 + j] = P_(4, 4);  // 각속도
-                else
-                    odom.twist.covariance[i * 6 + j] = 0.0;
-            }
-        }
-
+        
+        // 위치 공분산 (x, y, yaw)
+        odom.pose.covariance[0] = covariance_(0, 0);   // x
+        odom.pose.covariance[7] = covariance_(1, 1);   // y
+        odom.pose.covariance[35] = covariance_(2, 2);  // yaw
+        
+        // 속도 공분산 (vx, vy는 v와 theta로부터 계산)
+        double cos_th = cos(theta);
+        double sin_th = sin(theta);
+        odom.twist.covariance[0] = cos_th * cos_th * covariance_(3, 3) + 
+                                  v * v * sin_th * sin_th * covariance_(2, 2);  // vx
+        odom.twist.covariance[7] = sin_th * sin_th * covariance_(3, 3) + 
+                                  v * v * cos_th * cos_th * covariance_(2, 2);  // vy
+        odom.twist.covariance[35] = covariance_(4, 4);  // omega
+        
         odom_pub_.publish(odom);
+        
+        ROS_DEBUG("EKF 오도메트리 발행: x=%.3f, y=%.3f, θ=%.3f, v=%.3f, ω=%.3f", 
+                  x, y, theta, v, omega);
+    }
+    
+    void resetEKF()
+    {
+        std::lock_guard<std::mutex> lock(ekf_mutex_);
+        initializeEKF();
+        ekf_initialized_ = false;
+        ROS_INFO("EKF가 리셋되었사옵니다.");
     }
 };
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "ekf_ackermann_odom_node");
-    EKFAckermannOdom odom_node;
-    ros::spin();
+    ros::init(argc, argv, "ackermann_ekf_odom_node");
+    
+    try {
+        AckermannEKF ekf_node;
+        ROS_INFO("Ackermann EKF 오도메트리 노드가 실행 중이옵니다...");
+        ros::spin();
+    }
+    catch (const std::exception& e) {
+        ROS_ERROR("노드 실행 중 오류가 발생하였사옵니다: %s", e.what());
+        return -1;
+    }
+    
     return 0;
 }

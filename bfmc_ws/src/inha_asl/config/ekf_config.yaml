@@ -10,6 +10,14 @@ drive_topic: "current_speed"
 imu_topic: "/d455/imu"
 odom_frame: "odom"
 base_frame: "base_link"
+publish_rate: 30
+
+# Preintegration 설정
+preint_accel_noise_std: 0.2      # Preintegration 가속도 노이즈
+preint_gyro_noise_std: 0.1       # Preintegration 자이로 노이즈  
+preint_max_time: 0.5             # 최대 preintegration 시간(초)
+preint_min_measurements: 5        # 최소 IMU 측정 수
+
 
 # 센서 캘리브레이션 gain 값들
 # drive_gain: 속도 센서 보정 계수 (센서값 / 실제값)
@@ -58,17 +66,3 @@ initial_covariance: [
   0.0,  0.0,  0.0,  1.0,  0.0,   # v
   0.0,  0.0,  0.0,  0.0,  1.0    # omega
 ]
-
-# 고급 설정 예시 (상관관계가 있는 경우)
-# process_covariance: [
-#   0.1,  0.05, 0.0,  0.0,  0.0,   # x와 y 사이에 약간의 상관관계
-#   0.05, 0.1,  0.0,  0.0,  0.0,   
-#   0.0,  0.0,  0.1,  0.02, 0.0,   # theta와 v 사이에 약간의 상관관계
-#   0.0,  0.0,  0.02, 0.1,  0.0,   
-#   0.0,  0.0,  0.0,  0.0,  0.1    
-# ]
-
-# ackermann_covariance: [
-#   0.2,  0.05,   # v와 omega 사이에 약간의 상관관계
-#   0.05, 0.2     
-# ]
