@@ -26,7 +26,7 @@ target_link_libraries(ackermann_odom_node
   ${catkin_LIBRARIES}
 )
 
-add_executable(ekf_ackermann_odom_node src/ekf_ackermann_odom.cpp)
-target_link_libraries(ekf_ackermann_odom_node
+add_executable(ekf_odom_node src/ekf_odom.cpp)
+target_link_libraries(ekf_odom_node
   ${catkin_LIBRARIES}
 )
