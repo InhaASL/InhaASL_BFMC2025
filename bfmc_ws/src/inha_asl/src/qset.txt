@@ -1,0 +1,25 @@
+asl@ubuntu:~/InhaASL_BFMC2025/bfmc_ws/src/inha_asl/src$ rostopic echo -n1 /ov_msckf/poseimu/pose/pose/orientation
+x: -0.7829301167355038
+y: 0.4364952448509631
+z: -0.201204534431138
+w: 0.3949798334793524
+---
+asl@ubuntu:~/InhaASL_BFMC2025/bfmc_ws/src/inha_asl/src$ rostopic echo -n1 /ov_msckf/poseimu/pose/pose/orientation
+x: -0.8336570555667955
+y: -0.24834926054741302
+z: -0.48449966981417947
+w: 0.09272878969988223
+---
+asl@ubuntu:~/InhaASL_BFMC2025/bfmc_ws/src/inha_asl/src$ rostopic echo -n1 /ov_msckf/poseimu/pose/pose/orientation
+x: -0.3162327935873085
+y: 0.19181271198912292
+z: -0.4558950893884282
+w: 0.8095457808245694
+---
+
+asl@ubuntu:~/InhaASL_BFMC2025/bfmc_ws/src/inha_asl/src$ 
+asl@ubuntu:~/InhaASL_BFMC2025/bfmc_ws/src/inha_asl/src$ rostopic echo -n1 /ov_msckf/poseimu/pose/pose/orientation
+x: -0.7625638934580938
+y: 0.02330893692388914
+z: 0.3217030408881044
+w: 0.5607674699346048
