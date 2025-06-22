@@ -99,8 +99,8 @@ if __name__ == "__main__":
         "General": Queue(),
         "Config": Queue(),
     }
-    # filename = "useful/publickey_server.pem"
-    filename = "useful/publickey_server_test.pem"
+    filename = "useful/publickey_server.pem"
+    # filename = "useful/publickey_server_test.pem"
     deviceID = 3
     frequency = 0.4
     traffic_communication = threadTrafficCommunication(
