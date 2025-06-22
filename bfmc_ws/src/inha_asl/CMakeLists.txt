@@ -31,12 +31,6 @@ target_link_libraries(ekf_odom_node
   ${catkin_LIBRARIES}
 )
 
-add_executable(global_pose_transformer src/GlobalPoseTransformer.cpp)
-target_link_libraries(global_pose_transformer ${catkin_LIBRARIES})
-
 add_executable(global_pose_tf_broadcaster src/GlobalPoseTFBroadcaster.cpp)
 target_link_libraries(global_pose_tf_broadcaster ${catkin_LIBRARIES})
 
-install(TARGETS global_pose_transformer global_pose_tf_broadcaster
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
