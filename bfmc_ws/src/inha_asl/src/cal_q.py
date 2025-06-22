@@ -1,34 +1,26 @@
 import numpy as np
 from tf.transformations import quaternion_multiply, quaternion_inverse
 
-# 네 개를 입력해 주세요 (w, x, y, z 순)
-q0      = np.array([w0,x0,y0,z0])
-q_roll  = np.array([wr,xr,yr,zr])
-q_pitch = np.array([wp,xp,yp,zp])
-q_yaw   = np.array([wy,xy,yy,zy])
+# ① 방금 측정한 숫자를 그대로 넣는다 (w, x, y, z 순서 유지!)
+q0      = np.array([0.3949798335, -0.7829301167,  0.4364952448, -0.2012045344])
+q_roll  = np.array([0.0927287897, -0.8336570556, -0.2483492605, -0.4844996698])
+q_pitch = np.array([0.8095457808, -0.3162327936,  0.1918127120, -0.4558950894])
+q_yaw   = np.array([0.5607674699, -0.7625638935,  0.0233089369,  0.3217030409])
 
-# ① 각 축 단위 회전(90°)이 카메라 frame에서 어떤 벡터로 나타나는지
-dq_roll  = quaternion_multiply(q_roll , quaternion_inverse(q0))
-dq_pitch = quaternion_multiply(q_pitch, quaternion_inverse(q0))
-dq_yaw   = quaternion_multiply(q_yaw , quaternion_inverse(q0))
+def diff(q2,q1):
+    return quaternion_multiply(q2, quaternion_inverse(q1))
 
-# ② 축 벡터( x,y,z 세 성분 )만 꺼냄
-v_roll  = dq_roll[1:]
-v_pitch = dq_pitch[1:]
-v_yaw   = dq_yaw[1:]
+# ② 90° 단위 회전→기준 간 차이 쿼터니언
+dq_r = diff(q_roll , q0)[1:]   # x,y,z 부분만
+dq_p = diff(q_pitch, q0)[1:]
+dq_y = diff(q_yaw , q0)[1:]
 
-# ③ “카메라 축 → ROS 축” 3×3 행렬을 구성
-M_cam2ros = np.vstack([v_roll, v_pitch, v_yaw]).T
-# 역행렬 = ROS→카메라 보정 행렬
-M_ros2cam = np.linalg.inv(M_cam2ros)
+# ③ 3×3 축-매핑 행렬
+M = np.vstack([dq_r, dq_p, dq_y]).T
 
-# ④ 행렬 → quaternion
-def mat2quat(M):
-    w = np.sqrt(1+np.trace(M))*0.5
-    x = np.sign(M[2,1]-M[1,2]) * np.sqrt(max(0,1+M[0,0]-M[1,1]-M[2,2]))*0.5
-    y = np.sign(M[0,2]-M[2,0]) * np.sqrt(max(0,1-M[0,0]+M[1,1]-M[2,2]))*0.5
-    z = np.sign(M[1,0]-M[0,1]) * np.sqrt(max(0,1-M[0,0]-M[1,1]+M[2,2]))*0.5
-    return np.array([w,x,y,z])
-
-q_offset = mat2quat(M_cam2ros)   # 바로 코드에 넣을 보정 quaternion
-print("q_offset =", q_offset)
+# ④ 행렬 → 쿼터니언 (ROS 코드에 쓸 보정값)
+w = np.sqrt(1 + np.trace(M)) / 2.0
+x = (M[2,1] - M[1,2]) / (4*w)
+y = (M[0,2] - M[2,0]) / (4*w)
+z = (M[1,0] - M[0,1]) / (4*w)
+print("q_offset  (x y z w) =", x, y, z, w)
