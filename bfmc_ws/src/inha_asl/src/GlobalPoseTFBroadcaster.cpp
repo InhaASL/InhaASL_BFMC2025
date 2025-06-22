@@ -27,25 +27,27 @@ private:
         const auto& p     = msg->pose.pose.position;
         const auto& q_msg = msg->pose.pose.orientation;
 
-        // 2) TF2 quaternion 으로 변환 및 정규화
+        // 2) TF2 quaternion 으로 변환 및 정규화 후 역변환
         tf2::Quaternion q_meas;
         tf2::fromMsg(q_msg, q_meas);
         q_meas.normalize();
+        tf2::Quaternion q_meas_inv = q_meas.inverse();
 
         // 3) 추가 회전: RPY = (0°, 90°, 0°)
         tf2::Quaternion q_offset;
-        q_offset.setRPY(M_PI/2.0, M_PI/2.0, M_PI);  // roll=0°, pitch=90°, yaw=0°
+        q_offset.setRPY(0.0, M_PI/2.0, 0.0);  // pitch만 +90°
         q_offset.normalize();
 
-        // 4) 최종 orientation = 측정치 * 추가 회전
-        tf2::Quaternion q_final = q_meas * q_offset;
+        // 4) 최종 orientation = offset * (q_meas 역변환)
+        //    => 보정 회전을 먼저 적용한 뒤 역변환을 씌워 줌
+        tf2::Quaternion q_final = q_offset * q_meas_inv;
         q_final.normalize();
 
         // 5) TF 메시지 구성
         geometry_msgs::TransformStamped tf_msg;
         tf_msg.header.stamp    = msg->header.stamp;
-        tf_msg.header.frame_id = "start";       // 부모 프레임
-        tf_msg.child_frame_id  = "base_link";   // 자식 프레임
+        tf_msg.header.frame_id = "start";
+        tf_msg.child_frame_id  = "base_link";
 
         tf_msg.transform.translation.x = p.x;
         tf_msg.transform.translation.y = p.y;
@@ -55,6 +57,7 @@ private:
         // 6) 전송
         tf_broadcaster_.sendTransform(tf_msg);
     }
+
 };
 
 int main(int argc, char** argv)
