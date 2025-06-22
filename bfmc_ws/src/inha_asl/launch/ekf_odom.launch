@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <launch>
     <!-- EKF Ackermann Odometry Node -->
-    <node name="ekf_ackermann_odom" pkg="your_package_name" type="ekf_ackermann_odom_node" output="screen">
+    <node name="ekf_odom" pkg="inha_asl" type="ekf_odom_node" output="screen">
         <!-- 설정 파일 로드 -->
-        <rosparam file="$(find your_package_name)/config/ekf_config.yaml" command="load" />
+        <rosparam file="$(find inha_asl)/config/ekf_config.yaml" command="load" />
         
         <!-- 개별 파라미터 오버라이드 (필요시) -->
         <!-- <param name="wheel_base" value="0.26" /> -->

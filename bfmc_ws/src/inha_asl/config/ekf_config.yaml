@@ -5,7 +5,7 @@ wheel_base: 0.26
 use_tf: true
 
 # 토픽 및 프레임 설정
-odom_topic: "odom"
+odom_topic: "imu_odom"
 drive_topic: "current_speed"
 imu_topic: "/d455/imu"
 odom_frame: "odom"

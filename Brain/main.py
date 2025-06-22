@@ -83,8 +83,8 @@ logger = logging.getLogger()
 
 Dashboard = False
 Camera = False
-Semaphores = True
-TrafficCommunication = True
+Semaphores = False
+TrafficCommunication = False
 SerialHandler = True
 
 # ------ New component flags starts here ------#
