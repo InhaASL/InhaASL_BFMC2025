@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <geometry_msgs/PoseStamped.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h> 
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <Eigen/Dense>
@@ -34,7 +35,7 @@ public:
 
         // Subscriber & Publisher
         sub_pose_ = nh.subscribe("/ov_msckf/poseimu", 10, &GlobalPoseTransformer::poseCallback, this);
-        pub_global_pose_ = nh.advertise<geometry_msgs::PoseStamped>("/global_pose", 10);
+        pub_global_pose_ = nh.advertise<geometry_msgs::PoseStamped>("/world_pose", 10);
 
         ROS_INFO("GlobalPoseTransformer initialized with initial pose: x=%.3f, y=%.3f, z=%.3f", x, y, z);
     }
@@ -46,7 +47,7 @@ private:
     Eigen::Matrix4d init_pose_;
     bool has_init_;
 
-    void poseCallback(const geometry_msgs::PoseStamped::ConstPtr& msg)
+    void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg)
     {
         if (!has_init_)
         {
@@ -54,13 +55,12 @@ private:
             return;
         }
 
-        Eigen::Quaterniond q_vio(msg->pose.orientation.w,
-                                 msg->pose.orientation.x,
-                                 msg->pose.orientation.y,
-                                 msg->pose.orientation.z);
-        Eigen::Matrix3d R_vio = q_vio.toRotationMatrix();
+        const auto& p = msg->pose.pose.position;
+        const auto& q = msg->pose.pose.orientation;
 
-        Eigen::Vector3d t_vio(msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
+        Eigen::Quaterniond q_vio(q.w, q.x, q.y, q.z);
+        Eigen::Matrix3d R_vio = q_vio.toRotationMatrix();
+        Eigen::Vector3d t_vio(p.x, p.y, p.z);
 
         Eigen::Matrix4d T_vio = Eigen::Matrix4d::Identity();
         T_vio.block<3,3>(0,0) = R_vio;
@@ -85,7 +85,7 @@ private:
         global_msg.pose.orientation.w = q_global.w();
 
         pub_global_pose_.publish(global_msg);
-    }
+    }   
 };
 
 int main(int argc, char** argv)

@@ -2,6 +2,9 @@
 <launch>
     <!-- global_pose_transformer 노드 -->
     <node pkg="inha_asl" type="global_pose_transformer" name="global_pose_transformer" output="screen">
+    <!-- <param name="init_x" value="11.77" /> -->
+    <!-- <param name="init_y" value="2.05" /> -->
+    <!-- <param name="init_z" value="0.0" /> -->
         <param name="init_x" value="11.77" />
         <param name="init_y" value="2.05" />
         <param name="init_z" value="0.0" />
