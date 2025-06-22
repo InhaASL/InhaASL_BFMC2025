@@ -12,6 +12,10 @@
         <param name="init_qy" value="0.0" />
         <param name="init_qz" value="0.0" />
         <param name="init_qw" value="1.0" />
+        <!-- <param name="init_qz" value="-0.7071" />
+        <param name="init_qw" value="0.7071" /> -->
+
+        
     </node>
 
     <!-- global_pose_tf_broadcaster 노드 -->

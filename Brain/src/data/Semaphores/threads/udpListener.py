@@ -47,6 +47,7 @@ class udpListener(protocol.DatagramProtocol):
         self.debugging = debugging
 
         self.pub = rospy.Publisher('/semaphore_info', String, queue_size=10)
+        
         if not rospy.core.is_initialized():
             rospy.init_node('udp_listener_node', anonymous=True)
 
