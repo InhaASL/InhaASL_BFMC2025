@@ -45,6 +45,7 @@ private:
         
         tf2::Quaternion q_final = q_offset * q_meas_inv; // 기존
 
+
         q_final.normalize();
 
         // 5) TF 메시지 구성
