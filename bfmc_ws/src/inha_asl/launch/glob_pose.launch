@@ -13,7 +13,7 @@
         <param name="init_qz" value="0.0" />
         <param name="init_qw" value="1.0" />
         <param name="use_inverse" value="true"/>
-        <param name="roll_sign"   value="-1"/>  <!-- -90° -->
+        <param name="roll_sign"   value="1"/>  <!-- -90° -->
         <!-- <param name="init_qz" value="-0.7071" />
         <param name="init_qw" value="0.7071" /> -->
 

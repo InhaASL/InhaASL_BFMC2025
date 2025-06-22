@@ -1,0 +1,42 @@
+asl@ubuntu:~/InhaASL_BFMC2025/bfmc_ws/src/inha_asl/src$ rostopic echo -n1 /ov_msckf/poseimu/pose/pose/orientation
+x: -0.7829301167355038
+y: 0.4364952448509631
+z: -0.201204534431138
+w: 0.3949798334793524
+---
+asl@ubuntu:~/InhaASL_BFMC2025/bfmc_ws/src/inha_asl/src$ rostopic echo -n1 /ov_msckf/poseimu/pose/pose/orientation
+x: -0.8336570555667955
+y: -0.24834926054741302
+z: -0.48449966981417947
+w: 0.09272878969988223
+---
+asl@ubuntu:~/InhaASL_BFMC2025/bfmc_ws/src/inha_asl/src$ rostopic echo -n1 /ov_msckf/poseimu/pose/pose/orientation
+x: -0.3162327935873085
+y: 0.19181271198912292
+z: -0.4558950893884282
+w: 0.8095457808245694
+---
+
+asl@ubuntu:~/InhaASL_BFMC2025/bfmc_ws/src/inha_asl/src$ 
+asl@ubuntu:~/InhaASL_BFMC2025/bfmc_ws/src/inha_asl/src$ rostopic echo -n1 /ov_msckf/poseimu/pose/pose/orientation
+x: -0.7625638934580938
+y: 0.02330893692388914
+z: 0.3217030408881044
+w: 0.5607674699346048
+
+계산된 값
+asl@ubuntu:~/InhaASL_BFMC2025/bfmc_ws/src/inha_asl/src$ python3 cal_q.py 
+q_offset  (x y z w) = 0.24411126485284962 -0.012215400856871462 0.00666498679258153 0.7681571583099704
+
+
+/home/asl/InhaASL_BFMC2025/bfmc_ws/src/inha_asl/src/GlobalPoseTFBroadcaster.cpp: In member function ‘void GlobalToBaseLinkTF::poseCallback(const ConstPtr&)’:
+/home/asl/InhaASL_BFMC2025/bfmc_ws/src/inha_asl/src/GlobalPoseTFBroadcaster.cpp:44:25: error: redeclaration of ‘tf2::Quaternion q_off’
+   44 |         tf2::Quaternion q_off;
+      |                         ^~~~~
+/home/asl/InhaASL_BFMC2025/bfmc_ws/src/inha_asl/src/GlobalPoseTFBroadcaster.cpp:34:25: note: ‘tf2::Quaternion q_off’ previously declared here
+   34 |         tf2::Quaternion q_off(0.24411126485284962 ,-0.012215400856871462 ,0.00666498679258153, 0.7681571583099704);
+      |                         ^~~~~
+make[2]: *** [inha_asl/CMakeFiles/global_pose_tf_broadcaster.dir/build.make:63: inha_asl/CMakeFiles/global_pose_tf_broadcaster.dir/src/GlobalPoseTFBroadcaster.cpp.o] 오류 1
+make[1]: *** [CMakeFiles/Makefile2:1602: inha_asl/CMakeFiles/global_pose_tf_broadcaster.dir/all] 오류 2
+make: *** [Makefile:141: all] 오류 2
+Invoking "make -j6 -l6" failed
