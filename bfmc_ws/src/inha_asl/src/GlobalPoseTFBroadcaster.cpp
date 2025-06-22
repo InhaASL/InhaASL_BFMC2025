@@ -35,12 +35,16 @@ private:
 
         // 3) 추가 회전: RPY = (0°, 90°, 0°)
         tf2::Quaternion q_offset;
-        q_offset.setRPY(0.0, M_PI/2.0, 0.0);  // pitch만 +90°
+        // q_offset.setRPY(0.0, M_PI/2.0, 0.0);  // pitch만 +90°
+        q_offset.setRPY(-M_PI/2.0, 0, -M_PI/2.0);  //cmp
+
         q_offset.normalize();
 
         // 4) 최종 orientation = offset * (q_meas 역변환)
         //    => 보정 회전을 먼저 적용한 뒤 역변환을 씌워 줌
-        tf2::Quaternion q_final = q_offset * q_meas_inv;
+        
+        tf2::Quaternion q_final = q_offset * q_meas_inv; // 기존
+
         q_final.normalize();
 
         // 5) TF 메시지 구성
@@ -49,9 +53,10 @@ private:
         tf_msg.header.frame_id = "start";
         tf_msg.child_frame_id  = "base_link";
 
+        double z_offset = 0.1; // 이거 해줄필요없음. 지금 맞음 
         tf_msg.transform.translation.x = p.x;
         tf_msg.transform.translation.y = p.y;
-        tf_msg.transform.translation.z = p.z;
+        tf_msg.transform.translation.z = p.z ;
         tf_msg.transform.rotation      = tf2::toMsg(q_final);
 
         // 6) 전송
