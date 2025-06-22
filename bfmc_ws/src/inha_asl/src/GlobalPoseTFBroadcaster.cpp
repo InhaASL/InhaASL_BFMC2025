@@ -28,6 +28,8 @@ private:
 
     void poseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg)
     {
+
+        const auto& p = msg->pose.pose.position;
         /* ① 측정 quaternion */
         tf2::Quaternion q_meas;
         tf2::fromMsg(msg->pose.pose.orientation, q_meas);
@@ -48,9 +50,11 @@ private:
         /* ④ TF 메시지 송신 */
         geometry_msgs::TransformStamped tfm;
         tfm.header.stamp    = msg->header.stamp;
-        tfm.header.frame_id = "start";
+        tfm.header.frame_id = "start"; 
         tfm.child_frame_id  = "base_link";
-        tfm.transform.translation = msg->pose.pose.position;
+        tfm.transform.translation.x = p.x;
+        tfm.transform.translation.y = p.y;
+        tfm.transform.translation.z = p.z;
         tfm.transform.rotation    = tf2::toMsg(q_final);
         tf_pub_.sendTransform(tfm);
     }
