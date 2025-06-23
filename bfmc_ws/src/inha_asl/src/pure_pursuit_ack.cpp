@@ -15,12 +15,13 @@ public:
   PurePursuitAck()
   {
     ros::NodeHandle nh, pnh("~");
-    pnh.param("wheelbase",        L_,      0.26);  // [m]
+    pnh.param("wheelbase",        L_,      0.268);  // [m]
     pnh.param("lookahead",        Ld_,     0.3);   // [m]
     pnh.param("speed",            v_set_,  1.0);   // [m/s]
     pnh.param("min_speed_ratio",  v_min_r_,0.2);
     pnh.param("max_steer_angle",  steer_max_, 0.418); // 24° rad
     pnh.param("search_window",    win_,    30);    // path index window
+    pnh.param("path_scale",      scale_,  0.70);   // ★ 추가 (기본 1.0)
 
     sub_pose_ = nh.subscribe("/global_pose1", 1, &PurePursuitAck::poseCb, this);
     sub_path_ = nh.subscribe("/global_path", 1, &PurePursuitAck::pathCb, this);
@@ -37,6 +38,8 @@ private:
   /* parameters */
   double L_, Ld_, v_set_, v_min_r_, steer_max_;
   int    win_;
+
+  double scale_;           // ★ 추가
 
   /* data */
   nav_msgs::Path path_;
@@ -59,9 +62,18 @@ private:
 
   void pathCb(const nav_msgs::Path::ConstPtr& msg)
   {
-    path_   = *msg;
+    // ★ 스케일 보정된 경로를 새 Path로 복사
+    path_.poses.clear();
+    path_.header = msg->header;
+    for (const auto& ps : msg->poses)
+    {
+      geometry_msgs::PoseStamped p = ps;
+      p.pose.position.x *= scale_;
+      p.pose.position.y *= scale_;
+      path_.poses.push_back(p);
+    }
     idx_start_ = 0;
-    path_ok_ = !path_.poses.empty();
+    path_ok_   = !path_.poses.empty();
   }
 
   void poseCb(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg)
