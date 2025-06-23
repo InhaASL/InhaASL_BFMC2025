@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <launch>
     <!-- global_pose_transformer 노드 -->
-    <node pkg="inha_asl" type="global_pose_transformer" name="global_pose_transformer" output="screen">
+    <node pkg="inha_asl" type="global_pose_pub" name="global_pose_pub" output="screen">
     <!-- <param name="initial_x" value="11.77" /> -->
     <!-- <param name="initial_y" value="2.05" /> -->
     <!-- <param name="initial_z" value="0.0" /> -->
     <!-- <param name="initial_yaw" value="0.0"/> -->
-        <param name="initial_x" value="0.0" />
-        <param name="initial_y" value="0.0" />
+        <param name="initial_x" value="11.77" />
+        <param name="initial_y" value="2.05" />
         <param name="initial_z" value="0.0" />
         <param name="initial_yaw" value="0.0" />
     </node>
