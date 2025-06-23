@@ -37,8 +37,8 @@ target_link_libraries(global_pose_tf_broadcaster ${catkin_LIBRARIES})
 add_executable(global_pose_transformer src/globalTransformer.cpp)
 target_link_libraries(global_pose_transformer ${catkin_LIBRARIES})
 
-add_executable(global_pose_publisher src/global_pose_publisher.cpp)
+add_executable(global_pose_publisher src/global_pose_pub.cpp)
 target_link_libraries(global_pose_publisher ${catkin_LIBRARIES})
 
-add_executable(global_pose_pub src/global_pose_pub.cpp)
-target_link_libraries(global_pose_pub ${catkin_LIBRARIES})
+add_executable(global_pose_publisher1 src/global_pose_publisher1.cpp)
+target_link_libraries(global_pose_publisher1 ${catkin_LIBRARIES})

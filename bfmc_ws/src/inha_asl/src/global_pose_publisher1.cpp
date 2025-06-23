@@ -1,6 +1,8 @@
 #include <ros/ros.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 
+//cmh global pose
+
 class GlobalPosePublisher
 {
 public:
@@ -16,7 +18,7 @@ public:
 
         sub_pose_ = nh.subscribe("/ov_msckf/poseimu", 10,
                                  &GlobalPosePublisher::poseCallback, this);
-        pub_global_pose_ = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("/global_pose", 10);
+        pub_global_pose_ = nh.advertise<geometry_msgs::PoseWithCovarianceStamped>("/global_pose1", 10);
 
         ROS_INFO("GlobalPosePublisher initialized. Using offset (%.2f, %.2f, %.2f)",
                   init_x_, init_y_, init_z_);
@@ -31,6 +33,10 @@ private:
     {
         geometry_msgs::PoseWithCovarianceStamped global_msg = *msg;
 
+        // cm 단위로 변환 
+        // global_msg.pose.pose.position.x *= 100;
+        // global_msg.pose.pose.position.y *= 100;
+        // global_msg.pose.pose.position.z *= 100;
         // 위치에 offset 더해줌 (map 좌표 기준으로 변환)
         global_msg.pose.pose.position.x += init_x_;
         global_msg.pose.pose.position.y += init_y_;
@@ -45,7 +51,7 @@ private:
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "global_pose_publisher");
+    ros::init(argc, argv, "global_pose_publisher1");
     GlobalPosePublisher node;
     ros::spin();
     return 0;
