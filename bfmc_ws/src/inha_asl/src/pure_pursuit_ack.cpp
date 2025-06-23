@@ -20,7 +20,7 @@ public:
     pnh.param("max_steer_angle",  steer_max_, 0.418); // 24° rad
     pnh.param("search_window",    win_,    30);    // path index window
 
-    sub_pose_ = nh.subscribe("/global_pose", 1, &PurePursuitAck::poseCb, this);
+    sub_pose_ = nh.subscribe("/global_pose1", 1, &PurePursuitAck::poseCb, this);
     sub_path_ = nh.subscribe("/global_path", 1, &PurePursuitAck::pathCb, this);
     pub_cmd_  = nh.advertise<ackermann_msgs::AckermannDriveStamped>(
                    "/ackermann_cmd_mux/input/Navigation", 1);
