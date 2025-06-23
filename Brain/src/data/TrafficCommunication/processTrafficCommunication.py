@@ -35,8 +35,8 @@ from multiprocessing import Pipe
 from src.data.TrafficCommunication.useful.sharedMem import sharedMem
 from src.templates.workerprocess import WorkerProcess
 from src.data.TrafficCommunication.threads.threadTrafficCommunicaiton import (
-    threadTrafficCommunication,
-    threadROSTopicSubscriber
+    threadTrafficCommunication
+    # ,threadROSTopicSubscriber
 )
 class processTrafficCommunication(WorkerProcess):
     """This process receives the location of the car and sends it to the processGateway.

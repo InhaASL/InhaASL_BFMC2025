@@ -31,9 +31,9 @@ private:
 
         const auto& p = msg->pose.pose.position;
 
-        tf2::Quaternion q_off(0.24411126485284962 ,-0.012215400856871462 ,0.00666498679258153, 0.7681571583099704);
-        q_off.normalize();
-        
+        // tf2::Quaternion q_off(0.24411126485284962 ,-0.012215400856871462 ,0.00666498679258153, 0.7681571583099704);
+        // q_off.normalize();
+
         /* ① 측정 quaternion */
         tf2::Quaternion q_meas;
         tf2::fromMsg(msg->pose.pose.orientation, q_meas);
