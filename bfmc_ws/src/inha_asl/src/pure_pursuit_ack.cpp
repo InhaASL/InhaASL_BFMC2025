@@ -79,6 +79,11 @@ private:
       double dy = path_.poses[i].pose.position.y - P.y;
       if (std::hypot(dx,dy) >= Ld_) { goal_idx=i; break; }
     }
+
+    // 인덱스 디버깅용 
+    double dist = std::hypot(dx, dy);              // dx,dy는 G-P 계산 직후 값
+    ROS_WARN_STREAM_THROTTLE(0.5,
+    "goal_idx=" << goal_idx << "  dist=" << dist << "  Ld=" << Ld_);
     idx_start_ = goal_idx;
 
     const auto& G = path_.poses[goal_idx].pose.position;
