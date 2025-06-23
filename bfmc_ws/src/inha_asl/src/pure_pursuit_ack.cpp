@@ -88,7 +88,8 @@ private:
 
     /* Pure-Pursuit 조향 = atan2(2L sinα / Ld)  (여기서 sinα ≈ y_r/Ld) */
     double steer = std::atan2( 2.0 * L_ * y_r , (Ld_*Ld_) );
-    steer = std::clamp(steer, -steer_max_, steer_max_);
+    if (steer >  steer_max_)  steer =  steer_max_;
+    if (steer < -steer_max_)  steer = -steer_max_;
 
     /* 조향크기에 따라 속도 선형 감소 (Stanley 코드와 동일) */
     double v_dyn = v_set_ * (1.0 - std::abs(steer)/steer_max_ * (1.0 - v_min_r_));
