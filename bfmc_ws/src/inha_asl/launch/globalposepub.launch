@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="inha_asl" type="global_pose_publisher" name="global_pose_publisher" output="screen">
+    <param name="init_x" value="11.07"/>
+    <param name="init_y" value="2.07"/>
+    <param name="init_z" value="0.0"/>
+  </node>
+</launch>
