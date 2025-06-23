@@ -11,7 +11,7 @@ class threadROSTopicSubscriber(Thread):
         if not rospy.core.is_initialized():
             rospy.init_node("ros_subscriber_thread", anonymous=True)
 
-        self.sub = rospy.Subscriber("/traffic_info", PoseStamped, self.callback) 
+        self.sub = rospy.Subscriber("/traffic_info", PoseStamped, self.callback) #토픽명 localizationd으로 변경해주기
 
     def callback(self, msg):
         x = msg.pose.position.x
