@@ -42,3 +42,8 @@ target_link_libraries(global_pose_publisher ${catkin_LIBRARIES})
 
 add_executable(global_pose_publisher1 src/global_pose_publisher1.cpp)
 target_link_libraries(global_pose_publisher1 ${catkin_LIBRARIES})
+
+
+add_executable(pure_pursuit_node src/pure_pursuit_node.cpp)
+target_link_libraries(pure_pursuit_node ${catkin_LIBRARIES})
+add_dependencies(pure_pursuit_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
