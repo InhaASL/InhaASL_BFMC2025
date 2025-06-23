@@ -59,7 +59,7 @@ public:
         prev_relative_tf_ = relative_tf;
 
         // 누적 변화 적용
-        accumulated_tf_ = delta * accumulated_tf_;
+        accumulated_tf_ = accumulated_tf_ * delta;
 
         // global pose = origin * accumulated
         tf2::Transform global_tf = origin_transform_ * accumulated_tf_;
