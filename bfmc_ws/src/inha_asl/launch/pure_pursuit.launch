@@ -1,5 +1,7 @@
-<node pkg="inha_asl" type="pure_pursuit_node" name="pure_pursuit" output="screen">
-    <param name="lookahead" value="0.6"/>
-    <param name="linear_speed" value="1.0"/>
-    <param name="path_topic" value="/global_path"/>
-</node>
+<launch>
+    <node pkg="inha_asl" type="pure_pursuit_node" name="pure_pursuit" output="screen">
+        <param name="lookahead" value="0.6"/>
+        <param name="linear_speed" value="1.0"/>
+        <param name="path_topic" value="/global_path"/>
+    </node>
+</launch>

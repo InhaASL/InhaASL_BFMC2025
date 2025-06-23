@@ -1,0 +1,7 @@
+<launch>
+    <node pkg="inha_asl" type="csv_path_publisher.py" name="path_pub" output="screen">
+        <param name="csv_file" value="$(find inha_asl)/data/global_path.csv"/>
+        <param name="rate"     value="1"/>
+        <param name="frame_id" value="map"/>
+    </node>
+</launch>
