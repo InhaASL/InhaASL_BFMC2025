@@ -68,6 +68,8 @@ private:
     double roll,pitch,yaw;
     tf2::Matrix3x3(q).getRPY(roll,pitch,yaw);
 
+    yaw += M_PI_2; //보정치 
+
     /* ----- look-ahead 목표점 찾기 ----- */
     int idx_end  = std::min(idx_start_ + win_,
                             (int)path_.poses.size() - 1);
