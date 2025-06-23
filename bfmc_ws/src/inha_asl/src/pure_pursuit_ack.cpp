@@ -60,21 +60,24 @@ private:
     return a;
   }
 
-  void pathCb(const nav_msgs::Path::ConstPtr& msg)
+double x0_ = 11.77;    // 기준점 (첫 노드)  ← launch 파라미터로 빼도 됨
+double y0_ = 2.05;
+
+void pathCb(const nav_msgs::Path::ConstPtr& msg)
+{
+  path_.poses.clear();
+  path_.header = msg->header;
+
+  for (const auto& ps : msg->poses)
   {
-    // ★ 스케일 보정된 경로를 새 Path로 복사
-    path_.poses.clear();
-    path_.header = msg->header;
-    for (const auto& ps : msg->poses)
-    {
-      geometry_msgs::PoseStamped p = ps;
-      p.pose.position.x *= scale_;
-      p.pose.position.y *= scale_;
-      path_.poses.push_back(p);
-    }
-    idx_start_ = 0;
-    path_ok_   = !path_.poses.empty();
+    geometry_msgs::PoseStamped p = ps;
+    p.pose.position.x = x0_ + scale_ * (p.pose.position.x - x0_);   // ★
+    p.pose.position.y = y0_ + scale_ * (p.pose.position.y - y0_);   // ★
+    path_.poses.push_back(p);
   }
+  idx_start_ = 0;
+  path_ok_   = !path_.poses.empty();
+}
 
   void poseCb(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg)
   {
