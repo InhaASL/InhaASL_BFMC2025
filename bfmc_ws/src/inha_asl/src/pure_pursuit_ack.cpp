@@ -23,7 +23,7 @@ public:
     sub_pose_ = nh.subscribe("/global_pose1", 1, &PurePursuitAck::poseCb, this);
     sub_path_ = nh.subscribe("/global_path", 1, &PurePursuitAck::pathCb, this);
     pub_cmd_  = nh.advertise<ackermann_msgs::AckermannDriveStamped>(
-                   "/ackermann_cmd_mux/input/Navigation", 1);
+                   "/ackermann_cmd_mux/input/navigation", 1);
 
     ROS_INFO("Pure-Pursuit-Ackermann ready (Ld=%.2f m, v=%.2f m/s)", Ld_, v_set_);
   }
