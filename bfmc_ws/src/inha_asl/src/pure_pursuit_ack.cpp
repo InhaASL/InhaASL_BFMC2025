@@ -6,6 +6,8 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 #include <cmath>
 #include <vector>
+#include <visualization_msgs/Marker.h>     // ★ 추가(시각화 도구 )
+
 
 class PurePursuitAck
 {
@@ -14,7 +16,7 @@ public:
   {
     ros::NodeHandle nh, pnh("~");
     pnh.param("wheelbase",        L_,      0.26);  // [m]
-    pnh.param("lookahead",        Ld_,     0.6);   // [m]
+    pnh.param("lookahead",        Ld_,     0.3);   // [m]
     pnh.param("speed",            v_set_,  1.0);   // [m/s]
     pnh.param("min_speed_ratio",  v_min_r_,0.2);
     pnh.param("max_steer_angle",  steer_max_, 0.418); // 24° rad
@@ -24,6 +26,9 @@ public:
     sub_path_ = nh.subscribe("/global_path", 1, &PurePursuitAck::pathCb, this);
     pub_cmd_  = nh.advertise<ackermann_msgs::AckermannDriveStamped>(
                    "/ackermann_cmd_mux/input/navigation", 1);
+    
+    marker_pub_ = nh.advertise<visualization_msgs::Marker>(
+                    "/pp_target_marker", 1);               // ★ 추가               
 
     ROS_INFO("Pure-Pursuit-Ackermann ready (Ld=%.2f m, v=%.2f m/s)", Ld_, v_set_);
   }
@@ -41,6 +46,8 @@ private:
   /* ROS I/O */
   ros::Subscriber sub_pose_, sub_path_;
   ros::Publisher  pub_cmd_;
+  ros::Publisher  marker_pub_;         // ★ 추가
+
 
   /* helpers */
   static double normAngle(double a)
@@ -102,6 +109,23 @@ private:
     cmd.drive.steering_angle = steer;
     cmd.drive.speed          = v_dyn;
     pub_cmd_.publish(cmd);
+
+    /* ---------- RViz Marker (look-ahead point) ---------- */     // ★ 추가
+    visualization_msgs::Marker mk;
+    mk.header.frame_id = "map";          // 경로와 같은 프레임
+    mk.header.stamp    = ros::Time::now();
+    mk.ns   = "pp_target";
+    mk.id   = 0;
+    mk.type = visualization_msgs::Marker::SPHERE;
+    mk.action = visualization_msgs::Marker::ADD;
+    mk.pose.position.x = G.x;
+    mk.pose.position.y = G.y;
+    mk.pose.position.z = 0.05;           // 살짝 띄워 보이게
+    mk.pose.orientation.w = 1.0;
+    mk.scale.x = mk.scale.y = mk.scale.z = 0.25;
+    mk.color.r = 1.0;   mk.color.g = 0.0; mk.color.b = 0.0;
+    mk.color.a = 1.0;
+    marker_pub_.publish(mk);
   }
 };
 
