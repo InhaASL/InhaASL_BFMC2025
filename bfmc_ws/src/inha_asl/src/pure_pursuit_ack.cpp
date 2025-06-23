@@ -17,7 +17,7 @@ public:
   {
     ros::NodeHandle nh, pnh("~");
     pnh.param("wheelbase",       L_,       0.268);
-    pnh.param("lookahead",       Ld_,      0.30);
+    pnh.param("lookahead",       Ld_,      0.80);
     pnh.param("speed",           v_set_,   1.0);
     pnh.param("min_speed_ratio", v_min_r_, 0.2);
     pnh.param("max_steer_angle", steer_max_, 0.418);
