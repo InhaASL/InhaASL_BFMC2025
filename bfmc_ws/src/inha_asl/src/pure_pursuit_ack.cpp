@@ -1,4 +1,4 @@
-// pure_pursuit_ack.cpp  –  원본(스케일 보정 제거)
+// pure_pursuit_ack.cpp  –  (스케일 보정 제거 + 디버그 출력 정상)
 
 /* ----------  헤더  ---------- */
 #include <ros/ros.h>
@@ -31,7 +31,7 @@ public:
     marker_pub_= nh.advertise<visualization_msgs::Marker>(
                    "/pp_target_marker", 1);
 
-    ROS_INFO("Pure-Pursuit-Ackermann ready (Ld=%.2f m, v=%.2f m/s)",
+    ROS_INFO("Pure-Pursuit-Ack ready (Ld=%.2f m, v=%.2f m/s)",
              Ld_, v_set_);
   }
 
@@ -49,15 +49,14 @@ private:
   ros::Subscriber sub_pose_, sub_path_;
   ros::Publisher  pub_cmd_, marker_pub_;
 
-  /* callback – Path */
+  /* -------------------------------------------------- */
   void pathCb(const nav_msgs::Path::ConstPtr& msg)
   {
-    path_     = *msg;          // 그대로 복사(스케일 보정 없음)
+    path_     = *msg;          // 그대로 복사
     idx_start_= 0;
     path_ok_  = !path_.poses.empty();
   }
 
-  /* callback – Pose */
   void poseCb(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& msg)
   {
     if (!path_ok_) return;
@@ -69,26 +68,30 @@ private:
     double roll,pitch,yaw;
     tf2::Matrix3x3(q).getRPY(roll,pitch,yaw);
 
-    /* look-ahead 점 선택 */
-    int idx_end  = std::min(idx_start_+win_,
-                            (int)path_.poses.size()-1);
-    int goal_idx = path_.poses.size()-1;
-    for (int i=idx_start_; i<=idx_end; ++i)
-    {
-      double dx = path_.poses[i].pose.position.x - P.x;
-      double dy = path_.poses[i].pose.position.y - P.y;
-      if (std::hypot(dx,dy) >= Ld_) { goal_idx=i; break; }
-    }
+    /* ----- look-ahead 목표점 찾기 ----- */
+    int idx_end  = std::min(idx_start_ + win_,
+                            (int)path_.poses.size() - 1);
+    int goal_idx = path_.poses.size() - 1;          // fallback
 
-    // 인덱스 디버깅용 
-    double dist = std::hypot(dx, dy);              // dx,dy는 G-P 계산 직후 값
-    ROS_WARN_STREAM_THROTTLE(0.5,
-    "goal_idx=" << goal_idx << "  dist=" << dist << "  Ld=" << Ld_);
+    for (int i = idx_start_; i <= idx_end; ++i)
+    {
+      double dx_i = path_.poses[i].pose.position.x - P.x;
+      double dy_i = path_.poses[i].pose.position.y - P.y;
+      if (std::hypot(dx_i, dy_i) >= Ld_) { goal_idx = i; break; }
+    }
     idx_start_ = goal_idx;
 
+    /* 목표점 좌표 & 거리 */
     const auto& G = path_.poses[goal_idx].pose.position;
     double dx = G.x - P.x;
     double dy = G.y - P.y;
+    double dist = std::hypot(dx, dy);
+
+    /* 디버그 로그 (0.5초 간격) */
+    ROS_WARN_STREAM_THROTTLE(0.5,
+        "goal_idx=" << goal_idx
+      << "  dist="   << std::fixed << std::setprecision(3) << dist
+      << "  Ld="     << Ld_);
 
     /* 차량 좌표계 변환 */
     double x_r =  std::cos(yaw)*dx + std::sin(yaw)*dy;
@@ -99,11 +102,11 @@ private:
     steer = std::max(-steer_max_, std::min(steer, steer_max_));
 
     /* 속도 보정 */
-    double v_dyn = v_set_ * (1.0 - std::abs(steer)/steer_max_
-                             * (1.0 - v_min_r_));
+    double v_dyn = v_set_ *
+                   (1.0 - std::abs(steer)/steer_max_ * (1.0 - v_min_r_));
     v_dyn = std::max(0.1, v_dyn);
 
-    /* 퍼블리시 */
+    /* Ackermann 퍼블리시 */
     ackermann_msgs::AckermannDriveStamped cmd;
     cmd.header.stamp    = ros::Time::now();
     cmd.header.frame_id = "base_link";
